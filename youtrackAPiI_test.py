@@ -111,24 +111,95 @@ issues_handler_old.plot_issues_by_type(cycle_dates_old_query)
 
 client = OpenAI()
 
+# Assemble the prompt manually
+prompt = ""
+for message in [
+    {"role": "system",
+     "content": "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."},
+    {
+        "role": "user",
+        "content": """
+    Hello! I need your expertise to analyze the quality of ReSharper's recent releases. Specifically, I would like you to:
+
+    1. Compare the Distribution of Issues: Examine and compare the distribution of issue types reported in the current release (242) with those in the previous release (241).
+
+    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issue types between the two releases.
+
+    3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
+
+    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    """
+    },
+    {
+        "role": "user",
+        "content": f"Here is the data for the analysis:\n\n"
+                   f"**Current release (242) data:**\n```{issues_by_type}```\n\n"
+                   f"**Previous release (241) data:**\n```{issues_by_type_old}```"
+    },
+    {
+        "role": "user",
+        "content": """
+    To proceed with the analysis, follow these steps:
+
+    1. **Step-by-Step Comparison**: Break down the issue types in both releases and compare their frequencies. Calculate percentage changes where applicable.
+
+    2. **Trend Identification**: Look for any significant increases or decreases in issue types. Determine if there are emerging patterns or persistent problems.
+
+    3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
+
+    4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
+
+    Take your time to analyze the data thoroughly and provide a comprehensive response.
+    """
+    }
+]:
+    prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+
+# Print the assembled prompt
+print(prompt)
+
 completion = client.chat.completions.create(
     model="gpt-4o",
     messages=[
-        {"role": "system", "content": "You are a highly skilled Quality Assurance Lead at JetBrains."},
+        {"role": "system", "content": "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."},
         {
             "role": "user",
             "content": """
-Hello! I need your expertise to help analyze the quality of ReSharper's releases. What conclusion could be made from the following data? It shows the distribution of Issues by Type Created by members of JetBrains in the release.
+Hello! I need your expertise to analyze the quality of ReSharper's recent releases. Specifically, I would like you to:
 
-Current release (242):
-Previous release (241):
+1. Compare the Distribution of Issues: Examine and compare the distribution of issue types reported in the current release (242) with those in the previous release (241).
+
+2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issue types between the two releases.
+
+3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
+
+4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
 """
         },
         {
-            "role": "assistant",
-            "content": f"Current release data: {issues_by_type}\nPrevious release data: {issues_by_type_old}"
+            "role": "user",
+            "content": f"Here is the data for the analysis:\n\n"
+                       f"**Current release (242) data:**\n```{issues_by_type}```\n\n"
+                       f"**Previous release (241) data:**\n```{issues_by_type_old}```"
+        },
+        {
+            "role": "user",
+            "content": """
+To proceed with the analysis, follow these steps:
+
+1. **Step-by-Step Comparison**: Break down the issue types in both releases and compare their frequencies. Calculate percentage changes where applicable.
+
+2. **Trend Identification**: Look for any significant increases or decreases in issue types. Determine if there are emerging patterns or persistent problems.
+
+3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
+
+4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
+
+Take your time to analyze the data thoroughly and provide a comprehensive response.
+"""
         }
     ]
 )
+
 
 print(completion.choices[0].message.content)
