@@ -5,11 +5,15 @@ import matplotlib.pyplot as plt
 import requests
 from openai import OpenAI
 
+import numpy as np
+
 dates243 = "2024-08-15 .. Today"
 dates242 = "2024-04-10 .. 2024-08-14"
 dates241 = "2023-12-07 .. 2024-04-09"
 dates233 = "2023-08-02 .. 2023-12-06"
 dates232 = "2023-04-05 .. 2023-08-01"
+
+PRIORITIES = ['Show-stopper', 'Critical', 'Major', 'Normal', 'Minor']
 
 YOUTRACK_URL = "https://youtrack.jetbrains.com/api"
 TOKEN = os.getenv("YOUTRACK_TOKEN")
@@ -27,6 +31,7 @@ class YouTrackIssue:
         self.custom_fields = custom_fields
         self.type = None
         self.priority = None
+        self.subsystem = None
 
 
 class GetIssues:
@@ -34,18 +39,28 @@ class GetIssues:
         self.client = client
         self.query = query
 
+    # Get issue type from Custom Fields.
     def parse_issue_type(self, custom_fields: List[dict]) -> str:
         for field in custom_fields:
             if field['name'] == 'Type' and field['value'] is not None:
                 return field['value']['name']
         return None
 
+    # Get issue priority from Custom Fields.
     def parse_issue_priority(self, custom_fields: List[dict]) -> str:
         for field in custom_fields:
             if field['name'] == 'Priority' and field['value'] is not None:
                 return field['value']['name']
         return None
 
+    # Get issue subsystem from Custom Fields.
+    def parse_issue_subystem(self, custom_fields: List[dict]) -> str:
+        for field in custom_fields:
+            if field['name'] == 'Subsystem' and field['value'] is not None:
+                return field['value']['name']
+        return None
+
+    # Get list of YouTrack issues.
     def get_issues(self) -> List[YouTrackIssue]:
         api_query = f"{YOUTRACK_URL}/issues?fields=id,summary,customFields(name,value(name))&query={requests.utils.quote(self.query)}"
         response = self.client.get(api_query)
@@ -57,8 +72,29 @@ class GetIssues:
         for issue in youtrack_issues:
             issue.type = self.parse_issue_type(issue.custom_fields)
             issue.priority = self.parse_issue_priority(issue.custom_fields)
+            issue.subsystem = self.parse_issue_subystem(issue.custom_fields)
 
         return youtrack_issues
+
+    def get_all_issues_by_priority(self) -> Dict[str, int]:
+        youtrack_issues = self.get_issues()
+
+        issue_priority_counts = {}
+
+        for issue in youtrack_issues:
+            if issue.priority:
+                if issue.priority in issue_priority_counts:
+                    issue_priority_counts[issue.priority] += 1
+                else:
+                    issue_priority_counts[issue.priority] = 1
+
+        print("__")
+
+        for type_name, count in issue_priority_counts.items():
+            print(f"{type_name}: {count}")
+
+        return issue_priority_counts
+
 
     def get_bugs_by_priority(self) -> Dict[str, int]:
         youtrack_issues = self.get_issues()
@@ -66,7 +102,7 @@ class GetIssues:
         issue_priority_counts = {}
 
         for issue in youtrack_issues:
-            if issue.type == "Bug" and issue.priority:
+            if (issue.type == "Bug" or issue.type == "Performance Problem" or issue.type == "Usability Problem" or issue.type == "Exception") and issue.priority:
                 if issue.priority in issue_priority_counts:
                     issue_priority_counts[issue.priority] += 1
                 else:
@@ -116,12 +152,107 @@ class GetIssues:
         plt.title(f'Distribution of Issues by Type Created by JetBrains Team ({dates})')
         plt.show()
 
-def get_data(query:str)-> Dict[str, int]:
-    issues_handler = GetIssues(client, query)
-    issues_by_type = issues_handler.get_issues_by_type()
-    bugs_by_priority = issues_handler.get_bugs_by_priority()
-    issues_handler.plot_issues_by_type(issues_by_type, cycle_dates_query)
-    return issues_by_type
+    def plot_issues_by_priority(self, priority_counts: Dict[str, int], dates: str):
+        sorted_priorities = sorted(priority_counts.items(), key=lambda x: x[1], reverse=True)
+        sorted_labels, sorted_counts = zip(*sorted_priorities)
+
+        plt.figure(figsize=(10, 6))
+        plt.bar(sorted_labels, sorted_counts, color='skyblue')
+
+        plt.title(f'Number of Issues by Priority ({dates})')
+        plt.xlabel('Priority')
+        plt.ylabel('Number of Issues')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def plot_multiple_priority_dicts(self, priority_dicts: Dict[str, Dict[str, int]], dates: List[str]):
+        # Setting up the bar width
+        bar_width = 0.2  # Adjust this to fit your needs
+        index = np.arange(len(PRIORITIES))
+
+        # Plotting each dictionary's data
+        plt.figure(figsize=(12, 6))
+
+        for i, (label, priority_counts) in enumerate(priority_dicts.items()):
+            counts = [priority_counts.get(priority, 0) for priority in PRIORITIES]
+            plt.bar(index + i * bar_width, counts, bar_width, label=label)
+
+        # Adding titles and labels
+        plt.title('Comparison of Issues by Priority Across Multiple Periods')
+        plt.xlabel('Priority')
+        plt.ylabel('Number of Issues')
+        plt.xticks(index + bar_width * (len(priority_dicts) - 1) / 2, PRIORITIES, rotation=45)
+        plt.legend()
+        plt.tight_layout()
+
+        plt.show()
+
+    def plot_created_vs_fixed(self, data_created: Dict[str, Dict[str, int]], data_fixed: Dict[str, Dict[str, int]]):
+        # Pastel colors for bars
+        pastel_colors = [
+            '#AEC6CF', '#FFB347', '#77DD77', '#FF6961',  # Original colors
+            '#CFCFC4', '#FDFD96', '#836953', '#CB99C9',  # Additional pastel colors
+            '#F49AC2', '#B39EB5', '#FFB6C1', '#FFD1DC'  # More pastel colors
+        ]
+        categories = PRIORITIES
+
+        x = np.arange(len(categories))  # the label locations
+        width = 0.15  # the width of the bars
+
+        fig, ax = plt.subplots(figsize=(14, 8))
+
+        fixed_bars = []
+
+        # Loop through data and plot both created and fixed bars
+        for i, (key, color) in enumerate(zip(data_created.keys(), pastel_colors)):
+            # Extracting the values
+            created_values = [data_created[key].get(priority, 0) for priority in categories]
+            fixed_values = [data_fixed[key].get(priority, 0) for priority in categories]
+
+            # Plotting the created bars with less visibility
+            ax.bar(x + (i - 2) * width, created_values, width, label=f'{key} - created', color=color, alpha=0.4)
+
+            # Plotting the fixed bars on top of the created bars
+            rect = ax.bar(x + (i - 2) * width, fixed_values, width, label=f'{key}', color=color)
+            fixed_bars.append(rect)
+
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_xlabel('Priority')
+        ax.set_ylabel('Count')
+        ax.set_title('Distribution of Priorities')
+        ax.set_xticks(x)
+        ax.set_xticklabels(categories)
+        ax.legend()
+
+        # Function to add the numerical labels on top of the bars
+        def add_labels(rects):
+            for rect in rects:
+                height = rect.get_height()
+                ax.annotate('{}'.format(height),
+                            xy=(rect.get_x() + rect.get_width() / 2, height),
+                            xytext=(0, 3),  # 3 points vertical offset
+                            textcoords="offset points",
+                            ha='center', va='bottom')
+
+        # Function to add the percentage labels on top of the bars
+        def add_labels_percentage(rects, fixed_values, created_values):
+            for rect, fixed, created in zip(rects, fixed_values, created_values):
+                percent = (fixed / created) * 100 if created != 0 else 0
+                ax.annotate(f'{percent:.1f}%',
+                            xy=(rect.get_x() + rect.get_width() / 2, fixed),
+                            xytext=(0, 3),  # 3 points vertical offset
+                            textcoords="offset points",
+                            ha='center', va='bottom')
+
+        total_values = [sum(data_fixed[key].get(priority, 0) for key in data_fixed.keys()) for priority in categories]
+
+        for rects in fixed_bars:
+            add_labels(rects)
+
+        fig.tight_layout()
+        plt.show()
+
 
 def AskAI():
     global client
@@ -136,11 +267,11 @@ def AskAI():
             "content": """
     Hello! I need your expertise to analyze the quality of ReSharper's recent releases. Specifically, I would like you to:
 
-    1. Compare the Distribution of Issues: Examine and compare the distribution of issue types reported in the current release (242) with those in the previous release (241).
+    1. Compare the Distribution of Issues: Examine and compare the distribution of issues.
 
-    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issue types between the two releases.
+    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
 
-    3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
+    3. Highlight Areas of Concern or Improvement: Identify any issues that have shown significant changes or may indicate potential areas for improvement.
 
     4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
     """
@@ -148,17 +279,19 @@ def AskAI():
         {
             "role": "user",
             "content": f"Here is the data for the analysis:\n\n"
-                       f"**Current release (242) data:**\n```{issues_by_type}```\n\n"
-                       f"**Previous release (241) data:**\n```{issues_by_type_old}```"
+                       f"**Release 242 data:**\n```{issues_by_type_242}```\n\n"
+                       f"**Release 241 data:**\n```{issues_by_type_241}```\n\n"
+                       f"**Release 233 data:**\n```{issues_by_type_233}```\n\n"
+                       f"**Release 232 data:**\n```{issues_by_type_232}```\n\n"
         },
         {
             "role": "user",
             "content": """
     To proceed with the analysis, follow these steps:
 
-    1. **Step-by-Step Comparison**: Break down the issue types in both releases and compare their frequencies. Calculate percentage changes where applicable.
+    1. **Step-by-Step Comparison**: Break down the issues in releases and compare their frequencies. Calculate percentage changes where applicable.
 
-    2. **Trend Identification**: Look for any significant increases or decreases in issue types. Determine if there are emerging patterns or persistent problems.
+    2. **Trend Identification**: Look for any significant increases or decreases in issues. Determine if there are emerging patterns or persistent problems.
 
     3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
 
@@ -181,33 +314,35 @@ def AskAI():
                 "content": """
 Hello! I need your expertise to analyze the quality of ReSharper's recent releases. Specifically, I would like you to:
 
-1. Compare the Distribution of Issues: Examine and compare the distribution of issue types reported in the current release (242) with those in the previous release (241).
+    1. Compare the Distribution of Issues: Examine and compare the distribution of issues.
 
-2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issue types between the two releases.
+    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
 
-3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
+    3. Highlight Areas of Concern or Improvement: Identify any issues that have shown significant changes or may indicate potential areas for improvement.
 
-4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
 """
             },
             {
                 "role": "user",
                 "content": f"Here is the data for the analysis:\n\n"
-                           f"**Current release (242) data:**\n```{issues_by_type}```\n\n"
-                           f"**Previous release (241) data:**\n```{issues_by_type_old}```"
+                           f"**Release 242 data:**\n```{issues_by_type_242}```\n\n"
+                           f"**Release 241 data:**\n```{issues_by_type_241}```\n\n"
+                           f"**Release 233 data:**\n```{issues_by_type_233}```\n\n"
+                           f"**Release 232 data:**\n```{issues_by_type_232}```\n\n"
             },
             {
                 "role": "user",
                 "content": """
 To proceed with the analysis, follow these steps:
 
-1. **Step-by-Step Comparison**: Break down the issue types in both releases and compare their frequencies. Calculate percentage changes where applicable.
+    1. **Step-by-Step Comparison**: Break down the issues in releases and compare their frequencies. Calculate percentage changes where applicable.
 
-2. **Trend Identification**: Look for any significant increases or decreases in issue types. Determine if there are emerging patterns or persistent problems.
+    2. **Trend Identification**: Look for any significant increases or decreases in issues. Determine if there are emerging patterns or persistent problems.
 
-3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
+    3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
 
-4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
+    4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
 
 Take your time to analyze the data thoroughly and provide a comprehensive response.
 """
@@ -219,23 +354,111 @@ Take your time to analyze the data thoroughly and provide a comprehensive respon
 client = requests.Session()
 client.headers.update(headers)
 
-cycle_dates_query = f"created: {dates242}"
+# Get amount of tickets created by jetbrains-team
+#242
+cycle_dates_query_242 = f"created: {dates242}"
 additional_query = "created by: jetbrains-team"
-query = f"project:ReSharper and {cycle_dates_query} and {additional_query}"
+query_242 = f"project:ReSharper and {cycle_dates_query_242} and {additional_query}"
 
-issues_by_type = get_data(query)
+handler = GetIssues(client, query_242)
+issues_by_priority_242 = handler.get_all_issues_by_priority()
+issues_by_type_242 = handler.get_issues_by_type()
 
-cycle_dates_old_query = f"created: {dates241}"
-query_old = f"project:ReSharper and {cycle_dates_old_query} and {additional_query}"
+#241
+cycle_dates_query_241 = f"created: {dates241}"
+query_241 = f"project:ReSharper and {cycle_dates_query_241} and {additional_query}"
 
-issues_by_type_old = get_data(query_old)
+handler = GetIssues(client, query_241)
+issues_by_priority_241 = handler.get_all_issues_by_priority()
+issues_by_type_241 = handler.get_issues_by_type()
+
+#233
+cycle_dates_query_233 = f"created: {dates233}"
+query_233 = f"project:ReSharper and {cycle_dates_query_233} and {additional_query}"
+
+handler = GetIssues(client, query_233)
+issues_by_priority_233 = handler.get_all_issues_by_priority()
+issues_by_type_233 = handler.get_issues_by_type()
+
+#232
+cycle_dates_query_232 = f"created: {dates232}"
+query_232 = f"project:ReSharper and {cycle_dates_query_232} and {additional_query}"
+
+handler = GetIssues(client, query_232)
+issues_by_priority_232 = handler.get_all_issues_by_priority()
+issues_by_type_232 = handler.get_issues_by_type()
+
+
+created_by_jetbrains_team = {
+    f"Release 242 ({cycle_dates_query_242})": issues_by_priority_242,
+    f"Release 241 ({cycle_dates_query_241})": issues_by_priority_241,
+    f"Release 233 ({cycle_dates_query_233})": issues_by_priority_233,
+    f"Release 232 ({cycle_dates_query_232})": issues_by_priority_232,
+}
+
+# Get fixed tickets created by jetbrains-team
+#242
+additional_query_fixed = "created by: jetbrains-team and (state: fixed or state: Verified)"
+query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and {additional_query_fixed}"
+
+handler = GetIssues(client, query_242_fixed)
+fixed_issues_by_priority_242 = handler.get_all_issues_by_priority()
+fixed_issues_by_type_242 = handler.get_issues_by_type()
+
+#241
+query_241_fixed = f"project:ReSharper and {cycle_dates_query_241} and {additional_query_fixed}"
+
+handler = GetIssues(client, query_241_fixed)
+fixed_issues_by_priority_241 = handler.get_all_issues_by_priority()
+fixed_issues_by_type_241 = handler.get_issues_by_type()
+
+#233
+query_233_fixed = f"project:ReSharper and {cycle_dates_query_233} and {additional_query_fixed}"
+
+handler = GetIssues(client, query_233_fixed)
+fixed_issues_by_priority_233 = handler.get_all_issues_by_priority()
+fixed_issues_by_type_233 = handler.get_issues_by_type()
+
+#232
+query_232_fixed = f"project:ReSharper and {cycle_dates_query_232} and {additional_query_fixed}"
+
+handler = GetIssues(client, query_232_fixed)
+fixed_issues_by_priority_232 = handler.get_all_issues_by_priority()
+fixed_issues_by_type_232 = handler.get_issues_by_type()
+
+fixed_by_jetbrains_team = {
+    f"Release 242 ({cycle_dates_query_242})": fixed_issues_by_priority_242,
+    f"Release 241 ({cycle_dates_query_241})": fixed_issues_by_priority_241,
+    f"Release 233 ({cycle_dates_query_233})": fixed_issues_by_priority_233,
+    f"Release 232 ({cycle_dates_query_232})": fixed_issues_by_priority_232,
+}
+
+handler.plot_created_vs_fixed(created_by_jetbrains_team, fixed_by_jetbrains_team)
 
 # Bugs created by users after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
-cycle_dates_query = f"created: {dates243}"
+cycle_dates_query_242 = f"created: {dates243}"
 additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {cycle_dates_query} and {additional_query}"
+query = f"project:ReSharper and {cycle_dates_query_242} and {additional_query}"
 
-issues_by_type = get_data(query)
+issues_handler = GetIssues(client, query)
+issues_by_priority_242 = issues_handler.get_bugs_by_priority()
+issues_handler.plot_issues_by_priority(issues_by_priority_242, cycle_dates_query_242)
+
+cycle_dates_query_241 = f"created: {dates242}"
+additional_query = "created by: -jetbrains-team"
+query = f"project:ReSharper and {cycle_dates_query_241} and {additional_query}"
+
+issues_handler = GetIssues(client, query)
+issues_by_priority_241 = issues_handler.get_bugs_by_priority()
+issues_handler.plot_issues_by_priority(issues_by_priority_241, cycle_dates_query_241)
+
+# TODO: Compare only previous releases.
+priority_dicts = {
+    #f"Release 242 ({cycle_dates_query_242})": issues_by_priority_242,
+    f"Release 241 ({cycle_dates_query_241})": issues_by_priority_241,
+}
+
+issues_handler.plot_multiple_priority_dicts(priority_dicts, ["2024-04-10 to 2024-08-14", "2023-12-07 to 2024-04-09"])
 
 # Send data to AI
-#AskAI()
+AskAI()
