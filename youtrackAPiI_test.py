@@ -7,10 +7,56 @@ from openai import OpenAI
 
 import numpy as np
 
-dates243 = "2024-08-15 .. Today"
+AI_STEPS_MESSAGE = """
+    To proceed with the analysis, follow these steps:
+
+    1. **Step-by-Step Comparison**: Break down the issue types in releases and compare their frequencies. Calculate percentage changes where applicable.
+
+    2. **Trend Identification**: Look for any significant increases or decreases in issue types. Determine if there are emerging patterns or persistent problems.
+
+    3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
+
+    4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
+
+    Take your time to analyze the data thoroughly and provide a comprehensive response. Focus on latest release.
+    """
+
+AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES = """
+    Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
+
+    1. Compare the Distribution of Issues: Examine and compare the distribution of issue types.
+
+    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
+
+    3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
+
+    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    """
+
+AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES = """
+    Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
+
+    1. Compare the Distribution of Issues: Examine and compare the distribution of issue priorities.
+
+    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
+
+    3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
+
+    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    """
+
+AI_DESCRIPTION_OF_DATA = "It shows how many issues of each type were reported by ReSharper team members:"
+AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS = "It shows distributions of issues reported by users 2 weeks after each release by priority:"
+
+AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."
+
+dates242_2weeks = "2024-08-15 .. 2024-08-29"
 dates242 = "2024-04-10 .. 2024-08-14"
+dates241_2weeks = "2024-04-10 .. 2024-04-24"
 dates241 = "2023-12-07 .. 2024-04-09"
+dates233_2weeks = "2023-12-07 .. 2023-12-21"
 dates233 = "2023-08-02 .. 2023-12-06"
+dates232_2weeks = "2023-08-02 .. 2023-08-16"
 dates232 = "2023-04-05 .. 2023-08-01"
 
 PRIORITIES = ['Show-stopper', 'Critical', 'Major', 'Normal', 'Minor']
@@ -166,7 +212,7 @@ class GetIssues:
         plt.tight_layout()
         plt.show()
 
-    def plot_multiple_priority_dicts(self, priority_dicts: Dict[str, Dict[str, int]], dates: List[str]):
+    def plot_multiple_priority_dicts(self, priority_dicts: Dict[str, Dict[str, int]]):
         # Setting up the bar width
         bar_width = 0.2  # Adjust this to fit your needs
         index = np.arange(len(PRIORITIES))
@@ -254,98 +300,101 @@ class GetIssues:
         plt.show()
 
 
-def AskAI():
-    global client
+def ask_ai_issues_by_types(data: Dict[str, Dict[str, int]]):
+    #global client
     client = OpenAI()
     # Assemble the prompt manually
     prompt = ""
     for message in [
         {"role": "system",
-         "content": "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."},
+         "content": AI_SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": """
-    Hello! I need your expertise to analyze the quality of ReSharper's recent releases. Specifically, I would like you to:
-
-    1. Compare the Distribution of Issues: Examine and compare the distribution of issues.
-
-    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
-
-    3. Highlight Areas of Concern or Improvement: Identify any issues that have shown significant changes or may indicate potential areas for improvement.
-
-    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
-    """
+            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
         },
         {
             "role": "user",
-            "content": f"Here is the data for the analysis:\n\n"
-                       f"**Release 242 data:**\n```{issues_by_type_242}```\n\n"
-                       f"**Release 241 data:**\n```{issues_by_type_241}```\n\n"
-                       f"**Release 233 data:**\n```{issues_by_type_233}```\n\n"
-                       f"**Release 232 data:**\n```{issues_by_type_232}```\n\n"
+            "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA}\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in data.items()])
         },
         {
             "role": "user",
-            "content": """
-    To proceed with the analysis, follow these steps:
-
-    1. **Step-by-Step Comparison**: Break down the issues in releases and compare their frequencies. Calculate percentage changes where applicable.
-
-    2. **Trend Identification**: Look for any significant increases or decreases in issues. Determine if there are emerging patterns or persistent problems.
-
-    3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
-
-    4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
-
-    Take your time to analyze the data thoroughly and provide a comprehensive response.
-    """
+            "content": AI_STEPS_MESSAGE
         }
     ]:
         prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
     # Print the assembled prompt
     print(prompt)
+
     completion = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system",
-             "content": "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."},
+             "content": AI_SYSTEM_MESSAGE},
             {
                 "role": "user",
-                "content": """
-Hello! I need your expertise to analyze the quality of ReSharper's recent releases. Specifically, I would like you to:
-
-    1. Compare the Distribution of Issues: Examine and compare the distribution of issues.
-
-    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
-
-    3. Highlight Areas of Concern or Improvement: Identify any issues that have shown significant changes or may indicate potential areas for improvement.
-
-    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
-"""
+                "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
             },
             {
                 "role": "user",
-                "content": f"Here is the data for the analysis:\n\n"
-                           f"**Release 242 data:**\n```{issues_by_type_242}```\n\n"
-                           f"**Release 241 data:**\n```{issues_by_type_241}```\n\n"
-                           f"**Release 233 data:**\n```{issues_by_type_233}```\n\n"
-                           f"**Release 232 data:**\n```{issues_by_type_232}```\n\n"
+                "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA}\n\n"
+                           + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                          for release, issues in data.items()])
             },
             {
                 "role": "user",
-                "content": """
-To proceed with the analysis, follow these steps:
+                "content": AI_STEPS_MESSAGE
+            }
+        ]
+    )
+    print(completion.choices[0].message.content)
 
-    1. **Step-by-Step Comparison**: Break down the issues in releases and compare their frequencies. Calculate percentage changes where applicable.
+def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]):
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    for message in [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES
+        },
+        {
+            "role": "user",
+            "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS}\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in data.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
 
-    2. **Trend Identification**: Look for any significant increases or decreases in issues. Determine if there are emerging patterns or persistent problems.
-
-    3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
-
-    4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
-
-Take your time to analyze the data thoroughly and provide a comprehensive response.
-"""
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system",
+             "content": AI_SYSTEM_MESSAGE},
+            {
+                "role": "user",
+                "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES
+            },
+            {
+                "role": "user",
+                "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS}\n\n"
+                           + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                          for release, issues in data.items()])
+            },
+            {
+                "role": "user",
+                "content": AI_STEPS_MESSAGE
             }
         ]
     )
@@ -354,7 +403,7 @@ Take your time to analyze the data thoroughly and provide a comprehensive respon
 client = requests.Session()
 client.headers.update(headers)
 
-# Get amount of tickets created by jetbrains-team
+# Get tickets created by jetbrains-team
 #242
 cycle_dates_query_242 = f"created: {dates242}"
 additional_query = "created by: jetbrains-team"
@@ -396,6 +445,16 @@ created_by_jetbrains_team = {
     f"Release 232 ({cycle_dates_query_232})": issues_by_priority_232,
 }
 
+created_by_jetbrains_team_by_type = {
+    f"Release 242": issues_by_type_242,
+    f"Release 241": issues_by_type_241,
+    f"Release 233": issues_by_type_233,
+    f"Release 232": issues_by_type_232,
+}
+
+# Send data to AI
+ask_ai_issues_by_types(created_by_jetbrains_team_by_type)
+
 # Get fixed tickets created by jetbrains-team
 #242
 additional_query_fixed = "created by: jetbrains-team and (state: fixed or state: Verified)"
@@ -435,30 +494,51 @@ fixed_by_jetbrains_team = {
 
 handler.plot_created_vs_fixed(created_by_jetbrains_team, fixed_by_jetbrains_team)
 
-# Bugs created by users after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
-cycle_dates_query_242 = f"created: {dates243}"
+# Bugs created by users 2 weeks after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
+#242
+dates242_2weeks_query = f"created: {dates242_2weeks}"
 additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {cycle_dates_query_242} and {additional_query}"
+query = f"project:ReSharper and {dates242_2weeks_query} and {additional_query}"
 
 issues_handler = GetIssues(client, query)
 issues_by_priority_242 = issues_handler.get_bugs_by_priority()
-issues_handler.plot_issues_by_priority(issues_by_priority_242, cycle_dates_query_242)
+#issues_handler.plot_issues_by_priority(issues_by_priority_242, cycle_dates_query_242)
 
-cycle_dates_query_241 = f"created: {dates242}"
+#241
+dates241_2weeks_query = f"created: {dates241_2weeks}"
 additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {cycle_dates_query_241} and {additional_query}"
+query = f"project:ReSharper and {dates241_2weeks_query} and {additional_query}"
 
 issues_handler = GetIssues(client, query)
 issues_by_priority_241 = issues_handler.get_bugs_by_priority()
-issues_handler.plot_issues_by_priority(issues_by_priority_241, cycle_dates_query_241)
+#issues_handler.plot_issues_by_priority(issues_by_priority_241, cycle_dates_query_241)
 
-# TODO: Compare only previous releases.
+#233
+dates233_2weeks_query = f"created: {dates233_2weeks}"
+additional_query = "created by: -jetbrains-team"
+query = f"project:ReSharper and {dates233_2weeks_query} and {additional_query}"
+
+issues_handler = GetIssues(client, query)
+issues_by_priority_233 = issues_handler.get_bugs_by_priority()
+
+#232
+dates232_2weeks_query = f"created: {dates232_2weeks}"
+additional_query = "created by: -jetbrains-team"
+query = f"project:ReSharper and {dates232_2weeks_query} and {additional_query}"
+
+issues_handler = GetIssues(client, query)
+issues_by_priority_232 = issues_handler.get_bugs_by_priority()
+
 priority_dicts = {
-    #f"Release 242 ({cycle_dates_query_242})": issues_by_priority_242,
-    f"Release 241 ({cycle_dates_query_241})": issues_by_priority_241,
+    f"Release 242 ({dates242_2weeks_query})": issues_by_priority_242,
+    f"Release 241 ({dates241_2weeks_query})": issues_by_priority_241,
+    f"Release 233 ({dates233_2weeks_query})": issues_by_priority_233,
+    f"Release 232 ({dates232_2weeks_query})": issues_by_priority_232,
 }
 
-issues_handler.plot_multiple_priority_dicts(priority_dicts, ["2024-04-10 to 2024-08-14", "2023-12-07 to 2024-04-09"])
+issues_handler.plot_multiple_priority_dicts(priority_dicts)
 
 # Send data to AI
-AskAI()
+ask_ai_issues_by_priorities_2_weeks(priority_dicts)
+
+
