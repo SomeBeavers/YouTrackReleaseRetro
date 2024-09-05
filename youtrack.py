@@ -19,6 +19,7 @@ class YouTrackIssue:
         self.type = None
         self.priority = None
         self.subsystem = None
+        self.available_in = None
 
 
 class GetIssues:
@@ -47,6 +48,27 @@ class GetIssues:
                 return field['value']['name']
         return None
 
+    # Get issue subsystem from Custom Fields.
+    def parse_issue_Avaiable_in(self, custom_fields: List[dict]) -> str:
+        for field in custom_fields:
+            if field['name'] == 'Available in':
+                value = field['value']
+
+                # Check if the value is None
+                if value is None:
+                    return None
+
+                # If it's a list, extract values from the list
+                if isinstance(value, list):
+                    # Assuming you want to join multiple values in the list
+                    return ', '.join([v['name'] for v in value if 'name' in v])
+
+                # If it's a dictionary, extract the 'name'
+                if isinstance(value, dict) and 'name' in value:
+                    return value['name']
+
+        return None  # Return None if 'Available in' is not found
+
     # Get list of YouTrack issues.
     def get_issues(self) -> List[YouTrackIssue]:
         api_query = f"{YOUTRACK_URL}/issues?fields=id,summary,customFields(name,value(name))&query={requests.utils.quote(self.query)}"
@@ -60,6 +82,7 @@ class GetIssues:
             issue.type = self.parse_issue_type(issue.custom_fields)
             issue.priority = self.parse_issue_priority(issue.custom_fields)
             issue.subsystem = self.parse_issue_subystem(issue.custom_fields)
+            issue.available_in = self.parse_issue_Avaiable_in(issue.custom_fields)
 
         return youtrack_issues
 

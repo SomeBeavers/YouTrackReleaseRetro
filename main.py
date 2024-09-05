@@ -14,6 +14,9 @@ import ai_analysis
 from ai_analysis import ask_ai_issues_by_types, ask_ai_issues_by_priorities_2_weeks
 
 dates242_2weeks = "2024-08-15 .. 2024-08-29"
+dates242_1 = "2024-08-15 .. 2024-08-19"
+dates242_2 = "2024-08-20 .. 2024-08-25"
+dates242_3 = "2024-08-26 .. 2024-08-30"
 dates242 = "2024-04-10 .. 2024-08-14"
 dates241_2weeks = "2024-04-10 .. 2024-04-24"
 dates241 = "2023-12-07 .. 2024-04-09"
@@ -196,9 +199,52 @@ def get_issues_created_by_users_2_weeks_after_release():
     # ai_response = ask_ai_issues_by_priorities_2_weeks(priority_dicts)
     # append_markdown(f"\n{ai_response}\n")
 
+def get_issues_in_bugfix():
+    # Bugs created by users in 242 between bugfixes
+    append_markdown("## Issues created by users in 242 release between bugfixes")
+
+    # 2024.2 - 2024.2.1
+    created_242_1 = f"created: {dates242_1}"
+    additional_query = "created by: -jetbrains-team"
+    query_242_1 = f"project:ReSharper and {created_242_1} and {additional_query}"
+
+    issues_handler = GetIssues(client, query_242_1)
+    issues_by_priority_242_1 = issues_handler.get_bugs_by_priority()
+
+    # 2024.2.1 - 2024.2.2
+    created_242_2 = f"created: {dates242_2}"
+    additional_query = "created by: -jetbrains-team"
+    query_242_2 = f"project:ReSharper and {created_242_2} and {additional_query}"
+
+    issues_handler = GetIssues(client, query_242_2)
+    issues_by_priority_242_2 = issues_handler.get_bugs_by_priority()
+
+    # 2024.2.2 - 2024.2.3
+    created_242_3 = f"created: {dates242_3}"
+    additional_query = "created by: -jetbrains-team"
+    query_242_3 = f"project:ReSharper and {created_242_3} and {additional_query}"
+
+    issues_handler = GetIssues(client, query_242_3)
+    issues_by_priority_242_3 = issues_handler.get_bugs_by_priority()
+
+    created_by_users = {
+        f"2024.2 - 2024.2.1": issues_by_priority_242_1,
+        f"2024.2.1 - 2024.2.2": issues_by_priority_242_2,
+        f"2024.2.2 - 2024.2.3": issues_by_priority_242_3,
+    }
+
+    plot4 = plot_multiple_priority_dicts(created_by_users, "Issues created by users between bugfixes")
+    append_markdown("![Issues created by jetbrains-team by priority](images/" + os.path.basename(plot4) + ")")
+
+    # additional_query_fixed = "(state: fixed or state: Verified)"
+    # query_242_1_fixed = query_242_1 + f" and {additional_query_fixed}"
+    # handler = GetIssues(client, query_242_1_fixed)
+    # fixed_issues_by_priority_242_1 = handler.get_all_issues_by_priority()
+
 # Run
 get_issues_created_by_jetbrains_team_vs_fixed()
 get_issues_created_by_users_2_weeks_after_release()
+get_issues_in_bugfix()
 
 print(f"Report is generated.")
 
