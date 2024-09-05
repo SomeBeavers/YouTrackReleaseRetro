@@ -6,6 +6,7 @@ import numpy as np
 
 IMAGES_DIR = os.path.join("reports", "images")
 PRIORITIES = ['Show-stopper', 'Critical', 'Major', 'Normal', 'Minor']
+TYPES = ['Bug', 'Performance Problem', 'Security Problem', 'Exception', 'Usability Problem', 'Cosmetics', 'Improvement', 'Task', 'Feature', 'Plan', ]
 
 def save_plot(fig, title: str) -> str:
     # Generate a safe filename
@@ -54,7 +55,7 @@ def plot_issues_by_priority(priority_counts: Dict[str, int], dates: str) -> str:
     image_path = save_plot(fig, f'Number of Issues by Priority ({dates})')
     return image_path
 
-def plot_multiple_priority_dicts(priority_dicts: Dict[str, Dict[str, int]]) -> str:
+def plot_multiple_priority_dicts(priority_dicts: Dict[str, Dict[str, int]], title: str) -> str:
     # Setting up the bar width
     bar_width = 0.2  # Adjust this to fit your needs
     index = np.arange(len(PRIORITIES))
@@ -67,7 +68,7 @@ def plot_multiple_priority_dicts(priority_dicts: Dict[str, Dict[str, int]]) -> s
         plt.bar(index + i * bar_width, counts, bar_width, label=label)
 
     # Adding titles and labels
-    plt.title('Comparison of Issues by Priority Across Multiple Periods')
+    plt.title(title)
     plt.xlabel('Priority')
     plt.ylabel('Number of Issues')
     plt.xticks(index + bar_width * (len(priority_dicts) - 1) / 2, PRIORITIES, rotation=45)
@@ -76,17 +77,16 @@ def plot_multiple_priority_dicts(priority_dicts: Dict[str, Dict[str, int]]) -> s
 
     plt.show()
 
-    image_path = save_plot(fig, 'Comparison of Issues by Priority Across Multiple Periods')
+    image_path = save_plot(fig, title)
     return image_path
 
-def plot_created_vs_fixed(data_created: Dict[str, Dict[str, int]], data_fixed: Dict[str, Dict[str, int]]) -> str:
+def plot_created_vs_fixed_by_category(categories: list[str], data_created: Dict[str, Dict[str, int]], data_fixed: Dict[str, Dict[str, int]], title:str) -> str:
     # Pastel colors for bars
     pastel_colors = [
         '#AEC6CF', '#FFB347', '#77DD77', '#FF6961',  # Original colors
         '#CFCFC4', '#FDFD96', '#836953', '#CB99C9',  # Additional pastel colors
         '#F49AC2', '#B39EB5', '#FFB6C1', '#FFD1DC'  # More pastel colors
     ]
-    categories = PRIORITIES
 
     x = np.arange(len(categories))  # the label locations
     width = 0.15  # the width of the bars
@@ -111,7 +111,7 @@ def plot_created_vs_fixed(data_created: Dict[str, Dict[str, int]], data_fixed: D
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_xlabel('Priority')
     ax.set_ylabel('Count')
-    ax.set_title('Distribution of Priorities')
+    ax.set_title(title)
     ax.set_xticks(x)
     ax.set_xticklabels(categories)
     ax.legend()
@@ -144,5 +144,5 @@ def plot_created_vs_fixed(data_created: Dict[str, Dict[str, int]], data_fixed: D
     fig.tight_layout()
     plt.show()
 
-    image_path = save_plot(fig, 'Distribution of Priorities')
+    image_path = save_plot(fig, title)
     return image_path

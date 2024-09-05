@@ -11,7 +11,7 @@ def initialize_markdown():
         md_file.write("# ReSharper Release Quality Analysis Report\n\n")
         md_file.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}\n\n")
         md_file.write("## Table of Contents\n")
-        md_file.write("- [Issue Types Analysis](#issue-types-analysis)\n")
+        md_file.write("- [Issue Types Analysis](#Issues-Created-By-jetbrains-team-vs-Fixed)\n")
         md_file.write("- [Issue Priorities Analysis](#issue-priorities-analysis)\n")
         md_file.write("- [Bugs Prior to Release](#bugs-prior-to-release)\n")
         md_file.write("- [AI Insights](#ai-insights)\n\n")

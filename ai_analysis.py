@@ -13,7 +13,7 @@ AI_STEPS_MESSAGE = """
 
     4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
 
-    Take your time to analyze the data thoroughly and provide a comprehensive response. Focus on latest release.
+    Take your time to analyze the data thoroughly and provide a comprehensive response. Focus on latest release. Reply using markdown syntax.
     """
 
 AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES = """
@@ -46,12 +46,12 @@ AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS = "It shows distributions of issues re
 AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."
 
 
-def ask_ai_issues_by_types(data: Dict[str, Dict[str, int]]) -> str:
+def ask_ai_issues_by_types(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
     #global client
     client = OpenAI()
     # Assemble the prompt manually
     prompt = ""
-    for message in [
+    ai_messages = [
         {"role": "system",
          "content": AI_SYSTEM_MESSAGE},
         {
@@ -60,55 +60,39 @@ def ask_ai_issues_by_types(data: Dict[str, Dict[str, int]]) -> str:
         },
         {
             "role": "user",
-            "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA}\n\n"
+            "content": f"Amount of issues found by ReSharper's QAs of each type in each release:\n\n"
                        + "\n\n".join([f"**{release}:**\n```{issues}```"
-                                      for release, issues in data.items()])
+                                      for release, issues in created.items()])
+                       + "\n\n"
+                       + f"Amount of issues (found by ReSharper's QAs) which were fixed by developers in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in fixed.items()])
         },
         {
             "role": "user",
             "content": AI_STEPS_MESSAGE
         }
-    ]:
+    ]
+    for message in ai_messages:
         prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
     # Print the assembled prompt
     print(prompt)
 
     completion = client.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {"role": "system",
-             "content": AI_SYSTEM_MESSAGE},
-            {
-                "role": "user",
-                "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
-            },
-            {
-                "role": "user",
-                "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA}\n\n"
-                           + "\n\n".join([f"**{release}:**\n```{issues}```"
-                                          for release, issues in data.items()])
-            },
-            {
-                "role": "user",
-                "content": AI_STEPS_MESSAGE
-            }
-        ]
+        messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
     print(ai_response)
 
     return ai_response
 
-    # # Append AI response to the markdown file
-    # append_markdown("## AI Insights on Issue Types\n")
-    # append_markdown(f"```\n{ai_response}\n```")
-
 def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
     #global client
     client = OpenAI()
     # Assemble the prompt manually
     prompt = ""
-    for message in [
+    ai_messages = [
         {"role": "system",
          "content": AI_SYSTEM_MESSAGE},
         {
@@ -117,7 +101,7 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
         },
         {
             "role": "user",
-            "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS}\n\n"
+            "content": f"Here is the data for the analysis. It shows distributions of issues by priority reported by users 2 weeks after each release:\n\n"
                        + "\n\n".join([f"**{release}:**\n```{issues}```"
                                       for release, issues in data.items()])
         },
@@ -125,36 +109,17 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
             "role": "user",
             "content": AI_STEPS_MESSAGE
         }
-    ]:
+    ]
+    for message in ai_messages:
         prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
     # Print the assembled prompt
     print(prompt)
 
     completion = client.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {"role": "system",
-             "content": AI_SYSTEM_MESSAGE},
-            {
-                "role": "user",
-                "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES
-            },
-            {
-                "role": "user",
-                "content": f"Here is the data for the analysis. {AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS}\n\n"
-                           + "\n\n".join([f"**{release}:**\n```{issues}```"
-                                          for release, issues in data.items()])
-            },
-            {
-                "role": "user",
-                "content": AI_STEPS_MESSAGE
-            }
-        ]
+        messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
     print(ai_response)
-    return ai_response
 
-    # # Append AI response to the markdown file
-    # append_markdown("## AI Insights on Issue Priorities (2 Weeks Post-Release)\n")
-    # append_markdown(f"\n{ai_response}\n")
+    return ai_response
