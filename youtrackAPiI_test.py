@@ -1,4 +1,5 @@
 ﻿import os
+from datetime import datetime
 from typing import List, Dict
 
 import matplotlib.pyplot as plt
@@ -6,6 +7,12 @@ import requests
 from openai import OpenAI
 
 import numpy as np
+
+# Define directories
+REPORTS_DIR = "reports"
+IMAGES_DIR = os.path.join(REPORTS_DIR, "images")
+MARKDOWN_FILE = os.path.join(REPORTS_DIR, "ReSharper_Quality_Report.md")
+
 
 AI_STEPS_MESSAGE = """
     To proceed with the analysis, follow these steps:
@@ -138,6 +145,7 @@ class GetIssues:
 
         for type_name, count in issue_priority_counts.items():
             print(f"{type_name}: {count}")
+            append_markdown(f"{type_name}: {count}")
 
         return issue_priority_counts
 
@@ -177,10 +185,11 @@ class GetIssues:
 
         for type_name, count in issue_type_counts.items():
             print(f"{type_name}: {count}")
+            append_markdown(f"{type_name}: {count}")
 
         return issue_type_counts
 
-    def plot_issues_by_type(self, issue_type_counts: Dict[str, int], dates: str):
+    def plot_issues_by_type(self, issue_type_counts: Dict[str, int], dates: str) -> str:
         # Sort issue types by count in descending order
         sorted_issue_types = sorted(issue_type_counts.items(), key=lambda x: x[1], reverse=True)
         sorted_labels, sorted_counts = zip(*sorted_issue_types)
@@ -193,16 +202,20 @@ class GetIssues:
             return f'{absolute}'
 
         # Plotting the pie chart
-        plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(8, 8))
         plt.pie(sorted_counts, labels=sorted_labels, autopct=absolute_number, startangle=140)
         plt.title(f'Distribution of Issues by Type Created by JetBrains Team ({dates})')
         plt.show()
 
-    def plot_issues_by_priority(self, priority_counts: Dict[str, int], dates: str):
+        # Save the plot and return the image path
+        image_path = save_plot(fig, f'Distribution of Issues by Type Created by JetBrains Team ({dates})')
+        return image_path
+
+    def plot_issues_by_priority(self, priority_counts: Dict[str, int], dates: str) -> str:
         sorted_priorities = sorted(priority_counts.items(), key=lambda x: x[1], reverse=True)
         sorted_labels, sorted_counts = zip(*sorted_priorities)
 
-        plt.figure(figsize=(10, 6))
+        fig = plt.figure(figsize=(10, 6))
         plt.bar(sorted_labels, sorted_counts, color='skyblue')
 
         plt.title(f'Number of Issues by Priority ({dates})')
@@ -212,13 +225,16 @@ class GetIssues:
         plt.tight_layout()
         plt.show()
 
-    def plot_multiple_priority_dicts(self, priority_dicts: Dict[str, Dict[str, int]]):
+        image_path = save_plot(fig, f'Number of Issues by Priority ({dates})')
+        return image_path
+
+    def plot_multiple_priority_dicts(self, priority_dicts: Dict[str, Dict[str, int]]) -> str:
         # Setting up the bar width
         bar_width = 0.2  # Adjust this to fit your needs
         index = np.arange(len(PRIORITIES))
 
         # Plotting each dictionary's data
-        plt.figure(figsize=(12, 6))
+        fig = plt.figure(figsize=(12, 6))
 
         for i, (label, priority_counts) in enumerate(priority_dicts.items()):
             counts = [priority_counts.get(priority, 0) for priority in PRIORITIES]
@@ -234,7 +250,10 @@ class GetIssues:
 
         plt.show()
 
-    def plot_created_vs_fixed(self, data_created: Dict[str, Dict[str, int]], data_fixed: Dict[str, Dict[str, int]]):
+        image_path = save_plot(fig, 'Comparison of Issues by Priority Across Multiple Periods')
+        return image_path
+
+    def plot_created_vs_fixed(self, data_created: Dict[str, Dict[str, int]], data_fixed: Dict[str, Dict[str, int]]) -> str:
         # Pastel colors for bars
         pastel_colors = [
             '#AEC6CF', '#FFB347', '#77DD77', '#FF6961',  # Original colors
@@ -299,6 +318,9 @@ class GetIssues:
         fig.tight_layout()
         plt.show()
 
+        image_path = save_plot(fig, 'Distribution of Priorities')
+        return image_path
+
 
 def ask_ai_issues_by_types(data: Dict[str, Dict[str, int]]):
     #global client
@@ -348,7 +370,12 @@ def ask_ai_issues_by_types(data: Dict[str, Dict[str, int]]):
             }
         ]
     )
-    print(completion.choices[0].message.content)
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    # Append AI response to the markdown file
+    append_markdown("## AI Insights on Issue Types\n")
+    append_markdown(f"```\n{ai_response}\n```")
 
 def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]):
     #global client
@@ -398,22 +425,93 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]):
             }
         ]
     )
-    print(completion.choices[0].message.content)
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    # Append AI response to the markdown file
+    append_markdown("## AI Insights on Issue Priorities (2 Weeks Post-Release)\n")
+    append_markdown(f"\n{ai_response}\n")
+
+def initialize_markdown(file_path: str):
+    with open(file_path, 'w', encoding='utf-8') as md_file:
+        md_file.write("# ReSharper Release Quality Analysis Report\n\n")
+        md_file.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}\n\n")
+        md_file.write("## Table of Contents\n")
+        md_file.write("- [Issue Types Analysis](#issue-types-analysis)\n")
+        md_file.write("- [Issue Priorities Analysis](#issue-priorities-analysis)\n")
+        md_file.write("- [Bugs Prior to Release](#bugs-prior-to-release)\n")
+        md_file.write("- [AI Insights](#ai-insights)\n\n")
+
+def append_markdown(content: str):
+    with open(MARKDOWN_FILE, 'a', encoding='utf-8') as md_file:
+        md_file.write(content + "\n\n")
+
+def write_table(headers: List[str], rows: List[List[str]]):
+    table = "| " + " | ".join(headers) + " |\n"
+    table += "| " + " | ".join(['---'] * len(headers)) + " |\n"
+    for row in rows:
+        table += "| " + " | ".join(row) + " |\n"
+    append_markdown(table)
+
+def save_plot(fig, title: str) -> str:
+    # Generate a safe filename
+    filename = f"{title.replace(' ', '_').lower()}.png"
+    filepath = os.path.join(IMAGES_DIR, filename)
+    fig.savefig(filepath, bbox_inches='tight')
+    plt.close(fig)  # Close the figure to free memory
+    return filepath
+
+def log_issues_by_type(data: Dict[str, Dict[str, int]]):
+    append_markdown("## Issue Types Analysis\n")
+    headers = ["Release", "Issue Type", "Count"]
+    rows = []
+    for release, issues in data.items():
+        for issue_type, count in issues.items():
+            rows.append([release, issue_type, str(count)])
+    write_table(headers, rows)
+
+def log_issues_by_priority(data: Dict[str, Dict[str, int]]):
+    append_markdown("## Issue Priorities Analysis\n")
+    headers = ["Release", "Priority", "Count"]
+    rows = []
+    for release, issues in data.items():
+        for priority, count in issues.items():
+            rows.append([release, priority, str(count)])
+    write_table(headers, rows)
+
+def log_created_vs_fixed(image_path: str):
+    append_markdown("### Created vs Fixed Issues\n")
+    relative_image_path = os.path.relpath(image_path, REPORTS_DIR)
+    append_markdown(f"![Created vs Fixed Issues]({relative_image_path})")
+
+
+# Create directories if they don't exist
+os.makedirs(IMAGES_DIR, exist_ok=True)
+
+# Initialize the markdown file
+initialize_markdown(MARKDOWN_FILE)
 
 client = requests.Session()
 client.headers.update(headers)
 
 # Get tickets created by jetbrains-team
+append_markdown("Get tickets created by jetbrains-team")
 #242
+append_markdown("242")
+
 cycle_dates_query_242 = f"created: {dates242}"
 additional_query = "created by: jetbrains-team"
 query_242 = f"project:ReSharper and {cycle_dates_query_242} and {additional_query}"
+
 
 handler = GetIssues(client, query_242)
 issues_by_priority_242 = handler.get_all_issues_by_priority()
 issues_by_type_242 = handler.get_issues_by_type()
 
+
 #241
+append_markdown("241")
+
 cycle_dates_query_241 = f"created: {dates241}"
 query_241 = f"project:ReSharper and {cycle_dates_query_241} and {additional_query}"
 
@@ -422,6 +520,8 @@ issues_by_priority_241 = handler.get_all_issues_by_priority()
 issues_by_type_241 = handler.get_issues_by_type()
 
 #233
+append_markdown("233")
+
 cycle_dates_query_233 = f"created: {dates233}"
 query_233 = f"project:ReSharper and {cycle_dates_query_233} and {additional_query}"
 
@@ -430,6 +530,8 @@ issues_by_priority_233 = handler.get_all_issues_by_priority()
 issues_by_type_233 = handler.get_issues_by_type()
 
 #232
+append_markdown("232")
+
 cycle_dates_query_232 = f"created: {dates232}"
 query_232 = f"project:ReSharper and {cycle_dates_query_232} and {additional_query}"
 
@@ -452,8 +554,9 @@ created_by_jetbrains_team_by_type = {
     f"Release 232": issues_by_type_232,
 }
 
-# Send data to AI
-ask_ai_issues_by_types(created_by_jetbrains_team_by_type)
+
+# # Send data to AI
+# ask_ai_issues_by_types(created_by_jetbrains_team_by_type)
 
 # Get fixed tickets created by jetbrains-team
 #242
@@ -492,53 +595,57 @@ fixed_by_jetbrains_team = {
     f"Release 232 ({cycle_dates_query_232})": fixed_issues_by_priority_232,
 }
 
-handler.plot_created_vs_fixed(created_by_jetbrains_team, fixed_by_jetbrains_team)
+plot1 = handler.plot_created_vs_fixed(created_by_jetbrains_team, fixed_by_jetbrains_team)
+append_markdown("![Issues by Type](images/" + os.path.basename(plot1) + ")")
 
-# Bugs created by users 2 weeks after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
-#242
-dates242_2weeks_query = f"created: {dates242_2weeks}"
-additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {dates242_2weeks_query} and {additional_query}"
 
-issues_handler = GetIssues(client, query)
-issues_by_priority_242 = issues_handler.get_bugs_by_priority()
-#issues_handler.plot_issues_by_priority(issues_by_priority_242, cycle_dates_query_242)
+#
+# # Bugs created by users 2 weeks after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
+# #242
+# dates242_2weeks_query = f"created: {dates242_2weeks}"
+# additional_query = "created by: -jetbrains-team"
+# query = f"project:ReSharper and {dates242_2weeks_query} and {additional_query}"
+#
+# issues_handler = GetIssues(client, query)
+# issues_by_priority_242 = issues_handler.get_bugs_by_priority()
+# #issues_handler.plot_issues_by_priority(issues_by_priority_242, cycle_dates_query_242)
+#
+# #241
+# dates241_2weeks_query = f"created: {dates241_2weeks}"
+# additional_query = "created by: -jetbrains-team"
+# query = f"project:ReSharper and {dates241_2weeks_query} and {additional_query}"
+#
+# issues_handler = GetIssues(client, query)
+# issues_by_priority_241 = issues_handler.get_bugs_by_priority()
+# #issues_handler.plot_issues_by_priority(issues_by_priority_241, cycle_dates_query_241)
+#
+# #233
+# dates233_2weeks_query = f"created: {dates233_2weeks}"
+# additional_query = "created by: -jetbrains-team"
+# query = f"project:ReSharper and {dates233_2weeks_query} and {additional_query}"
+#
+# issues_handler = GetIssues(client, query)
+# issues_by_priority_233 = issues_handler.get_bugs_by_priority()
+#
+# #232
+# dates232_2weeks_query = f"created: {dates232_2weeks}"
+# additional_query = "created by: -jetbrains-team"
+# query = f"project:ReSharper and {dates232_2weeks_query} and {additional_query}"
+#
+# issues_handler = GetIssues(client, query)
+# issues_by_priority_232 = issues_handler.get_bugs_by_priority()
+#
+# priority_dicts = {
+#     f"Release 242 ({dates242_2weeks_query})": issues_by_priority_242,
+#     f"Release 241 ({dates241_2weeks_query})": issues_by_priority_241,
+#     f"Release 233 ({dates233_2weeks_query})": issues_by_priority_233,
+#     f"Release 232 ({dates232_2weeks_query})": issues_by_priority_232,
+# }
+#
+# issues_handler.plot_multiple_priority_dicts(priority_dicts)
+#
+# # Send data to AI
+# ask_ai_issues_by_priorities_2_weeks(priority_dicts)
 
-#241
-dates241_2weeks_query = f"created: {dates241_2weeks}"
-additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {dates241_2weeks_query} and {additional_query}"
-
-issues_handler = GetIssues(client, query)
-issues_by_priority_241 = issues_handler.get_bugs_by_priority()
-#issues_handler.plot_issues_by_priority(issues_by_priority_241, cycle_dates_query_241)
-
-#233
-dates233_2weeks_query = f"created: {dates233_2weeks}"
-additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {dates233_2weeks_query} and {additional_query}"
-
-issues_handler = GetIssues(client, query)
-issues_by_priority_233 = issues_handler.get_bugs_by_priority()
-
-#232
-dates232_2weeks_query = f"created: {dates232_2weeks}"
-additional_query = "created by: -jetbrains-team"
-query = f"project:ReSharper and {dates232_2weeks_query} and {additional_query}"
-
-issues_handler = GetIssues(client, query)
-issues_by_priority_232 = issues_handler.get_bugs_by_priority()
-
-priority_dicts = {
-    f"Release 242 ({dates242_2weeks_query})": issues_by_priority_242,
-    f"Release 241 ({dates241_2weeks_query})": issues_by_priority_241,
-    f"Release 233 ({dates233_2weeks_query})": issues_by_priority_233,
-    f"Release 232 ({dates232_2weeks_query})": issues_by_priority_232,
-}
-
-issues_handler.plot_multiple_priority_dicts(priority_dicts)
-
-# Send data to AI
-ask_ai_issues_by_priorities_2_weeks(priority_dicts)
-
+print(f"Report generated at {MARKDOWN_FILE}")
 

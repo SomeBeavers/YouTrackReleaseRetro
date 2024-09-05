@@ -1,2 +1,5 @@
 ﻿/.venv/
 /.idea/
+/reports/images/distribution_of_priorities.png
+/reports/ReSharper_Quality_Report.md
+/.vscode/settings.json
