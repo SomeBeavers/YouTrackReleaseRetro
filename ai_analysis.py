@@ -123,3 +123,40 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
     print(ai_response)
 
     return ai_response
+
+def ask_ai_issues_between_bugfixes(data: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES
+        },
+        {
+            "role": "user",
+            "content": f"Here is the data for the analysis. It shows distributions of issues created by users between bugfixes:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in data.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response

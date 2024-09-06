@@ -11,7 +11,7 @@ import plotter
 from plotter import plot_created_vs_fixed_by_category, plot_multiple_priority_dicts
 
 import ai_analysis
-from ai_analysis import ask_ai_issues_by_types, ask_ai_issues_by_priorities_2_weeks
+from ai_analysis import ask_ai_issues_by_types, ask_ai_issues_by_priorities_2_weeks, ask_ai_issues_between_bugfixes
 
 dates242_2weeks = "2024-08-15 .. 2024-08-29"
 dates242_1 = "2024-08-15 .. 2024-08-19"
@@ -141,10 +141,10 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
                                               "Distribution of issues by types (created by jetbrains-team vs fixed)")
     append_markdown("![Issues created by jetbrains-team by types](images/" + os.path.basename(plot2) + ")")
 
-    # # Send data to AI
-    # append_markdown("## AI analysis for issues created by jetbrains-team")
-    # ai_response = ask_ai_issues_by_types(created_by_jetbrains_team, fixed_by_jetbrains_team)
-    # append_markdown(f"\n{ai_response}\n")
+    # Send data to AI
+    append_markdown("## AI analysis for issues created by jetbrains-team")
+    ai_response = ask_ai_issues_by_types(created_by_jetbrains_team, fixed_by_jetbrains_team)
+    append_markdown(f"\n{ai_response}\n")
 
 def get_issues_created_by_users_2_weeks_after_release():
     # Bugs created by users 2 weeks after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
@@ -194,10 +194,10 @@ def get_issues_created_by_users_2_weeks_after_release():
     plot3 = plot_multiple_priority_dicts(priority_dicts, "Issues created by users 2 weeks after the release")
     append_markdown("![Issues created by jetbrains-team by priority](images/" + os.path.basename(plot3) + ")")
 
-    # # Send data to AI
-    # append_markdown("## AI analysis for issues created by users 2 weeks after release")
-    # ai_response = ask_ai_issues_by_priorities_2_weeks(priority_dicts)
-    # append_markdown(f"\n{ai_response}\n")
+    # Send data to AI
+    append_markdown("## AI analysis for issues created by users 2 weeks after release")
+    ai_response = ask_ai_issues_by_priorities_2_weeks(priority_dicts)
+    append_markdown(f"\n{ai_response}\n")
 
 def get_issues_in_bugfix():
     # Bugs created by users in 242 between bugfixes
@@ -235,6 +235,12 @@ def get_issues_in_bugfix():
 
     plot4 = plot_multiple_priority_dicts(created_by_users, "Issues created by users between bugfixes")
     append_markdown("![Issues created by jetbrains-team by priority](images/" + os.path.basename(plot4) + ")")
+
+    # Send data to AI
+    append_markdown("## AI analysis for issues created by users between bugfixes")
+    ai_response = ask_ai_issues_between_bugfixes(created_by_users)
+    append_markdown(f"\n{ai_response}\n")
+
 
     # additional_query_fixed = "(state: fixed or state: Verified)"
     # query_242_1_fixed = query_242_1 + f" and {additional_query_fixed}"
