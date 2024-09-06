@@ -7,7 +7,7 @@ AI_STEPS_MESSAGE = """
 
     1. **Step-by-Step Comparison**: Break down the issues and compare their frequencies. Calculate percentage changes where applicable. Don't print this info.
 
-    2. **Trend Identification**: Look for any significant increases or decreases in issus. Determine if there are emerging patterns or persistent problems.
+    2. **Trend Identification**: Look for any significant increases or decreases in issues. Determine if there are emerging patterns or persistent problems.
 
     3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
 
@@ -24,6 +24,8 @@ AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES = """
     2. Highlight Areas of Concern or Improvement: Identify any areas that have shown significant changes or may indicate potential areas for improvement.
 
     3. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    
+    4. Provide conclusions about the quality of the latest release.
     """
 
 AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Specialist at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the data about the recent ReSharper releases to make a conclusions about quality."
