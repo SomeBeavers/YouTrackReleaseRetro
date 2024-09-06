@@ -5,9 +5,9 @@ from openai import OpenAI
 AI_STEPS_MESSAGE = """
     To proceed with the analysis, follow these steps:
 
-    1. **Step-by-Step Comparison**: Break down the issue types in releases and compare their frequencies. Calculate percentage changes where applicable.
+    1. **Step-by-Step Comparison**: Break down the issues and compare their frequencies. Calculate percentage changes where applicable. Don't print this info.
 
-    2. **Trend Identification**: Look for any significant increases or decreases in issue types. Determine if there are emerging patterns or persistent problems.
+    2. **Trend Identification**: Look for any significant increases or decreases in issus. Determine if there are emerging patterns or persistent problems.
 
     3. **Concerns and Improvements**: Highlight any categories that have worsened or improved significantly. Assess if there are any issues that need urgent attention.
 
@@ -19,31 +19,14 @@ AI_STEPS_MESSAGE = """
 AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES = """
     Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
 
-    1. Compare the Distribution of Issues: Examine and compare the distribution of issue types.
+    1. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
 
-    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
+    2. Highlight Areas of Concern or Improvement: Identify any areas that have shown significant changes or may indicate potential areas for improvement.
 
-    3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
-
-    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    3. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
     """
 
-AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES = """
-    Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
-
-    1. Compare the Distribution of Issues: Examine and compare the distribution of issue priorities.
-
-    2. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
-
-    3. Highlight Areas of Concern or Improvement: Identify any issue categories that have shown significant changes or may indicate potential areas for improvement.
-
-    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
-    """
-
-AI_DESCRIPTION_OF_DATA = "It shows how many issues of each type were reported by ReSharper team members:"
-AI_DESCRIPTION_OF_DATA_PRIORITIES_2_WEEKS = "It shows distributions of issues reported by users 2 weeks after each release by priority:"
-
-AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Lead at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the distribution of issues reported in the recent ReSharper releases, providing a detailed comparison and actionable insights."
+AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Specialist at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the data about the recent ReSharper releases to make a conclusions about quality."
 
 
 def ask_ai_issues_by_types(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
@@ -97,7 +80,7 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
          "content": AI_SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES
+            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
         },
         {
             "role": "user",
@@ -134,7 +117,7 @@ def ask_ai_issues_between_bugfixes(data: Dict[str, Dict[str, int]]) -> str:
          "content": AI_SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_PRIORITIES
+            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
         },
         {
             "role": "user",

@@ -42,8 +42,8 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
-    additional_query = "created by: jetbrains-team"
-    query_242 = f"project:ReSharper and {cycle_dates_query_242} and {additional_query}"
+    additional_query = "created by: jetbrains-team and created by: -dotnet-support"
+    query_242 = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query})"
 
     handler = GetIssues(client, query_242)
     issues_by_priority_242 = handler.get_all_issues_by_priority()
@@ -51,7 +51,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 
     # 241
     cycle_dates_query_241 = f"created: {dates241}"
-    query_241 = f"project:ReSharper and {cycle_dates_query_241} and {additional_query}"
+    query_241 = f"project:ReSharper and {cycle_dates_query_241} and ({additional_query})"
 
     handler = GetIssues(client, query_241)
     issues_by_priority_241 = handler.get_all_issues_by_priority()
@@ -59,7 +59,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 
     # 233
     cycle_dates_query_233 = f"created: {dates233}"
-    query_233 = f"project:ReSharper and {cycle_dates_query_233} and {additional_query}"
+    query_233 = f"project:ReSharper and {cycle_dates_query_233} and ({additional_query})"
 
     handler = GetIssues(client, query_233)
     issues_by_priority_233 = handler.get_all_issues_by_priority()
@@ -67,7 +67,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 
     # 232
     cycle_dates_query_232 = f"created: {dates232}"
-    query_232 = f"project:ReSharper and {cycle_dates_query_232} and {additional_query}"
+    query_232 = f"project:ReSharper and {cycle_dates_query_232} and ({additional_query})"
 
     handler = GetIssues(client, query_232)
     issues_by_priority_232 = handler.get_all_issues_by_priority()
@@ -90,8 +90,8 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     # Get fixed tickets created by jetbrains-team
 
     # 242
-    additional_query_fixed = "created by: jetbrains-team and (state: fixed or state: Verified)"
-    query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and {additional_query_fixed}"
+    additional_query_fixed = "created by: jetbrains-team and created by: -dotnet-support and (state: fixed or state: Verified)"
+    query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
 
     handler = GetIssues(client, query_242_fixed)
     fixed_issues_by_priority_242 = handler.get_all_issues_by_priority()
@@ -152,8 +152,8 @@ def get_issues_created_by_users_2_weeks_after_release():
 
     # 242
     dates242_2weeks_query = f"created: {dates242_2weeks}"
-    additional_query = "created by: -jetbrains-team"
-    query = f"project:ReSharper and {dates242_2weeks_query} and {additional_query}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query = f"project:ReSharper and {dates242_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
     issues_by_priority_242 = issues_handler.get_bugs_by_priority()
@@ -161,8 +161,7 @@ def get_issues_created_by_users_2_weeks_after_release():
 
     # 241
     dates241_2weeks_query = f"created: {dates241_2weeks}"
-    additional_query = "created by: -jetbrains-team"
-    query = f"project:ReSharper and {dates241_2weeks_query} and {additional_query}"
+    query = f"project:ReSharper and {dates241_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
     issues_by_priority_241 = issues_handler.get_bugs_by_priority()
@@ -170,16 +169,14 @@ def get_issues_created_by_users_2_weeks_after_release():
 
     # 233
     dates233_2weeks_query = f"created: {dates233_2weeks}"
-    additional_query = "created by: -jetbrains-team"
-    query = f"project:ReSharper and {dates233_2weeks_query} and {additional_query}"
+    query = f"project:ReSharper and {dates233_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
     issues_by_priority_233 = issues_handler.get_bugs_by_priority()
 
     # 232
     dates232_2weeks_query = f"created: {dates232_2weeks}"
-    additional_query = "created by: -jetbrains-team"
-    query = f"project:ReSharper and {dates232_2weeks_query} and {additional_query}"
+    query = f"project:ReSharper and {dates232_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
     issues_by_priority_232 = issues_handler.get_bugs_by_priority()
@@ -205,24 +202,22 @@ def get_issues_in_bugfix():
 
     # 2024.2 - 2024.2.1
     created_242_1 = f"created: {dates242_1}"
-    additional_query = "created by: -jetbrains-team"
-    query_242_1 = f"project:ReSharper and {created_242_1} and {additional_query}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query_242_1 = f"project:ReSharper and {created_242_1} and ({additional_query})"
 
     issues_handler = GetIssues(client, query_242_1)
     issues_by_priority_242_1 = issues_handler.get_bugs_by_priority()
 
     # 2024.2.1 - 2024.2.2
     created_242_2 = f"created: {dates242_2}"
-    additional_query = "created by: -jetbrains-team"
-    query_242_2 = f"project:ReSharper and {created_242_2} and {additional_query}"
+    query_242_2 = f"project:ReSharper and {created_242_2} and ({additional_query})"
 
     issues_handler = GetIssues(client, query_242_2)
     issues_by_priority_242_2 = issues_handler.get_bugs_by_priority()
 
     # 2024.2.2 - 2024.2.3
     created_242_3 = f"created: {dates242_3}"
-    additional_query = "created by: -jetbrains-team"
-    query_242_3 = f"project:ReSharper and {created_242_3} and {additional_query}"
+    query_242_3 = f"project:ReSharper and {created_242_3} and ({additional_query})"
 
     issues_handler = GetIssues(client, query_242_3)
     issues_by_priority_242_3 = issues_handler.get_bugs_by_priority()
