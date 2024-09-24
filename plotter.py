@@ -4,6 +4,8 @@ from typing import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 
+import youtrack
+
 IMAGES_DIR = os.path.join("reports", "images")
 PRIORITIES = ['Show-stopper', 'Critical', 'Major', 'Normal', 'Minor']
 TYPES = ['Bug', 'Performance Problem', 'Security Problem', 'Exception', 'Usability Problem', 'Cosmetics', 'Improvement', 'Task', 'Feature', 'Plan', ]
@@ -38,40 +40,71 @@ def plot_issues_by_type(issue_type_counts: Dict[str, int], dates: str) -> str:
     image_path = save_plot(fig, f'Distribution of Issues by Type Created by JetBrains Team ({dates})')
     return image_path
 
-def plot_issues_by_priority(priority_counts: Dict[str, int], dates: str) -> str:
-    sorted_priorities = sorted(priority_counts.items(), key=lambda x: x[1], reverse=True)
-    sorted_labels, sorted_counts = zip(*sorted_priorities)
-
-    fig = plt.figure(figsize=(10, 6))
-    plt.bar(sorted_labels, sorted_counts, color='skyblue')
-
-    plt.title(f'Number of Issues by Priority ({dates})')
-    plt.xlabel('Priority')
-    plt.ylabel('Number of Issues')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
-
-    image_path = save_plot(fig, f'Number of Issues by Priority ({dates})')
-    return image_path
-
-def plot_multiple_priority_dicts(priority_dicts: Dict[str, Dict[str, int]], title: str) -> str:
+def plot_by_subsystems_several_releases(issues: Dict[str, Dict[str, int]], title: str, category: str) -> str:
     # Setting up the bar width
     bar_width = 0.2  # Adjust this to fit your needs
-    index = np.arange(len(PRIORITIES))
+    index = 0
 
-    # Plotting each dictionary's data
-    fig = plt.figure(figsize=(12, 6))
+    all_subsystems = set()
+    for subsystem_counts in issues.values():
+        all_subsystems.update(subsystem_counts.keys())
+    subsystems = sorted(all_subsystems)
 
-    for i, (label, priority_counts) in enumerate(priority_dicts.items()):
-        counts = [priority_counts.get(priority, 0) for priority in PRIORITIES]
+    index = np.arange(len(subsystems))
+    fig = plt.figure(figsize=(18, 8))
+
+    for i, (label, subsystem_counts) in enumerate(issues.items()):
+        counts = [subsystem_counts.get(subsystem, 0) for subsystem in subsystems]
         plt.bar(index + i * bar_width, counts, bar_width, label=label)
+
 
     # Adding titles and labels
     plt.title(title)
-    plt.xlabel('Priority')
+    plt.xlabel(category)
     plt.ylabel('Number of Issues')
-    plt.xticks(index + bar_width * (len(priority_dicts) - 1) / 2, PRIORITIES, rotation=45)
+    plt.xticks(index + bar_width * (len(issues) - 1) / 2, subsystems, rotation=90)
+    plt.legend()
+    plt.tight_layout()
+
+    plt.show()
+
+    image_path = save_plot(fig, title)
+    return image_path
+
+def plot_multiple_priority_dicts(issues: Dict[str, Dict[str, int]], title: str, category: str) -> str:
+    # Setting up the bar width
+    bar_width = 0.2  # Adjust this to fit your needs
+    index = 0
+
+    if category == youtrack.PRIORITY:
+        index = np.arange(len(PRIORITIES))
+        fig = plt.figure(figsize=(12, 6))
+    if category == youtrack.SUBSYSTEM:
+        all_subsystems = set()
+        for subsystem_counts in issues.values():
+            all_subsystems.update(subsystem_counts.keys())
+        subsystems = sorted(all_subsystems)
+        index = np.arange(len(subsystems))
+        fig = plt.figure(figsize=(18, 8))
+
+
+    if category == youtrack.PRIORITY:
+        for i, (label, priority_counts) in enumerate(issues.items()):
+            counts = [priority_counts.get(priority, 0) for priority in PRIORITIES]
+            plt.bar(index + i * bar_width, counts, bar_width, label=label)
+    if category == youtrack.SUBSYSTEM:
+        for i, (label, subsystem_counts) in enumerate(issues.items()):
+            counts = [subsystem_counts.get(subsystem, 0) for subsystem in subsystems]
+            plt.bar(index + i * bar_width, counts, bar_width, label=label)
+
+    # Adding titles and labels
+    plt.title(title)
+    plt.xlabel(category)
+    plt.ylabel('Number of Issues')
+    if category == youtrack.PRIORITY:
+        plt.xticks(index + bar_width * (len(issues) - 1) / 2, PRIORITIES, rotation=45)
+    if category == youtrack.SUBSYSTEM:
+        plt.xticks(index + bar_width * (len(issues) - 1) / 2, subsystems, rotation=90)
     plt.legend()
     plt.tight_layout()
 

@@ -1,4 +1,5 @@
-﻿from typing import Dict
+﻿from collections import defaultdict
+from typing import Dict
 
 from openai import OpenAI
 
@@ -14,6 +15,12 @@ AI_STEPS_MESSAGE = """
     4. **Recommendations**: Based on your findings, provide detailed recommendations to improve the quality of future releases. Prioritize areas with the most significant changes or potential impact.
 
     Take your time to analyze the data thoroughly and provide a comprehensive response. Focus on latest release. Reply using markdown syntax.
+    """
+
+AI_COMMENTS_MESSAGE = """
+    The format is "**issue id:** [comments from users]". Please analyze the comments' mood. If comment user is upset than comment is negative. If user talks about the problem without negative emotions than comment is neutral. 
+    
+    Create a .md table with the results of the analysis: how many issues (positive, negative, neutral) are there and the common theme and the reason of the selected mood. YOU MUST show only table in the reply.
     """
 
 AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES = """
@@ -130,6 +137,66 @@ def ask_ai_issues_between_bugfixes(data: Dict[str, Dict[str, int]]) -> str:
         {
             "role": "user",
             "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_about_comments(data: Dict[str,list]):
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": f"I have the following data about comments from users in ReSharper bugtracker::\n\n"
+                       +"".join([f"**{id}:** `{comments}`" for id, comments in data.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_COMMENTS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_about_comments_combine(data: list):
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": f"Please combine the result of analysis in one table by summing counts by mood and specifying the average common theme:\n\n"
+                       +"".join(data)
         }
     ]
     for message in ai_messages:
