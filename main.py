@@ -11,7 +11,7 @@ import youtrack
 from youtrack import GetIssues
 
 import plotter
-from plotter import plot_created_vs_fixed_by_category, plot_multiple_priority_dicts, plot_by_subsystems_several_releases
+from plotter import *
 
 import re
 
@@ -542,6 +542,119 @@ def get_users_comments():
     final_response = ai_analysis.ask_ai_about_comments_combine(ai_responses)
     append_markdown(f"\n{final_response}\n")
 
+def get_planned_vs_actually_done():
+    append_markdown("## Planned vs actually done")
+    append_markdown("How many issues which were assigned to specific Fix version were actually done?")
+    append_markdown("Seems like priorities are incorrect because many criticals are not fixed.")
+
+    # 251
+    additional_query = f"tag: {planned_251}"
+    query_251 = f"project:ReSharper and ({additional_query})"
+
+    append_markdown("> Query " + release_251 +": " + query_251)
+
+    handler = GetIssues(client, query_251)
+    issues_by_priority_251 = handler.get_all_issues_by_priority()
+    issues_by_type_251 = handler.get_issues_by_type()
+
+    # 243
+    additional_query = f"tag: {planned_243}"
+    query_243 = f"project:ReSharper and ({additional_query})"
+
+    append_markdown("> Query " + release_243 +": " + query_243)
+
+    handler = GetIssues(client, query_243)
+    issues_by_priority_243 = handler.get_all_issues_by_priority()
+    issues_by_type_243 = handler.get_issues_by_type()
+
+    planned_issues_by_priority = {
+        f"Planned for 243": issues_by_priority_243,
+        f"Planned for 251": issues_by_priority_251,
+    }
+
+    planned_issues_by_type = {
+        f"Planned for 243": issues_by_type_243,
+        f"Planned for 251": issues_by_type_251,
+    }
+
+    # Get fixed
+
+    # 251
+    additional_query_fixed = f"tag: {planned_251} and (state: fixed or state: Verified)"
+    query_251_fixed = f"project:ReSharper and ({additional_query_fixed})"
+
+    append_markdown("> Query " + release_251 + ": " + query_251_fixed)
+
+    handler = GetIssues(client, query_251_fixed)
+    fixed_issues_by_priority_251 = handler.get_all_issues_by_priority()
+    fixed_issues_by_type_251 = handler.get_issues_by_type()
+
+    # 243
+    additional_query_fixed = f"tag: {planned_243} and (state: fixed or state: Verified)"
+    query_243_fixed = f"project:ReSharper and ({additional_query_fixed})"
+
+    append_markdown("> Query " + release_243 + ": " + query_243_fixed)
+
+    handler = GetIssues(client, query_243_fixed)
+    fixed_issues_by_priority_243 = handler.get_all_issues_by_priority()
+    fixed_issues_by_type_243 = handler.get_issues_by_type()
+
+    fixed_planned_issues_by_priority = {
+        f"Planned for 243": fixed_issues_by_priority_243,
+        f"Planned for 251": fixed_issues_by_priority_251,
+    }
+
+    fixed_planned_issues_by_type = {
+        f"Planned for 243": fixed_issues_by_type_243,
+        f"Planned for 251": fixed_issues_by_type_251,
+    }
+
+    plot1 = plot_created_vs_fixed_by_category(plotter.PRIORITIES, planned_issues_by_priority, fixed_planned_issues_by_priority,
+                                              "Distribution of issues planned vs Fixed by priorities")
+    append_markdown("![Issues planned vs Fixed by priority](images/" + os.path.basename(plot1) + ")")
+
+    plot2 = plot_created_vs_fixed_by_category(plotter.TYPES, planned_issues_by_type,
+                                              fixed_planned_issues_by_type,
+                                              "Distribution of issues planned vs Fixed by types")
+    append_markdown("![Issues planned vs Fixed by types](images/" + os.path.basename(plot2) + ")")
+
+    # # Send data to AI
+    # append_markdown("## AI analysis for planned vs Fixed issues")
+    # ai_response = ask_ai_issues_by_types(created_by_jetbrains_team, fixed_by_jetbrains_team)
+    # append_markdown(f"\n{ai_response}\n")
+
+def get_users_issues_by_dates():
+    append_markdown("## Users issues by dates")
+    append_markdown("When do users create more tickets?")
+
+    # 2025
+    dates_query = f"created: {year_2025}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query_2025 = f"project:ReSharper and {dates_query} and ({additional_query})"
+
+    append_markdown("> Query " + year_2024 + ": " + query_2025)
+
+    issues_handler = GetIssues(client, query_2025)
+    issues_by_date_2025 = issues_handler.get_issues_by()
+
+    # 2024
+    dates_query = f"created: {year_2024}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query_2024 = f"project:ReSharper and {dates_query} and ({additional_query})"
+
+    append_markdown("> Query " + year_2024 + ": " + query_2024)
+
+    issues_handler = GetIssues(client, query_2024)
+    issues_by_date_2024 = issues_handler.get_issues_by()
+
+    created_by_date= {
+        f"Year 2024": issues_by_date_2024[youtrack.CREATED_DATE],
+        f"Year 2025": issues_by_date_2025[youtrack.CREATED_DATE],
+    }
+
+    plot = plot_ticket_creation_dates_same_axis(created_by_date, [2024, 2025],"Issues created by users (by creation date)")
+    append_markdown("![Issues created by users (by creation date)](images/" + os.path.basename(plot) + ")")
+
 #HELPERS
 def extract_available_in_value(available_in: str):
     match = re.search(dates.REGEX_FOR_AVAILABLE_VERSION, available_in)
@@ -555,20 +668,22 @@ def split_dict(input_dict, n):
 
 # 1. Update dates
 # 2. Run
-# 3. Uncomment AI processing
+# 3. Uncomment AI processing TODO: check that AI queries are correct!!!
 
-# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team) #TODO: checked! Works fine!
-# get_issues_created_by_jetbrains_team_vs_fixed() #TODO: checked! Works fine!
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed() #TODO: checked! Works fine!
-# get_issues_created_by_users_2_weeks_after_release() #TODO: checked! Works fine!
-# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release() #TODO: checked! Works fine!
+# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team) #TODO: checked
+# get_issues_created_by_jetbrains_team_vs_fixed() #TODO: checked
+# get_issues_created_by_NOT_jetbrains_team_vs_fixed() #TODO: checked
+# get_issues_created_by_users_2_weeks_after_release() #TODO: checked
+# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release() #TODO: checked
 #
-# get_issues_in_bugfix() # Bugs created by users between bugfixes #TODO: checked! Works fine!
-# get_issues_fixed_in_bugfix() #TODO: checked! Works fine!
+# get_issues_in_bugfix() # Bugs created by users between bugfixes #TODO: checked
+# get_issues_fixed_in_bugfix() #TODO: checked
 
-# get_planned_vs_actually_done()
+get_users_issues_by_dates()
 
-#get_users_comments() #TODO: checked! Works fine!
+# get_planned_vs_actually_done() #TODO: checked
+
+#get_users_comments() #TODO: checked
 
 print(f"Report is generated.")
 

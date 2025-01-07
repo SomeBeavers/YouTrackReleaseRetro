@@ -9,6 +9,7 @@ TOKEN = os.getenv("YOUTRACK_TOKEN")
 
 PRIORITY = "Priority"
 SUBSYSTEM = "Subsystem"
+CREATED_DATE = "Created"
 
 headers = {
     "Authorization": f"Bearer {TOKEN}",
@@ -17,9 +18,10 @@ headers = {
 }
 
 class YouTrackIssue:
-    def __init__(self, id: str, summary: str, custom_fields: List[dict]):
+    def __init__(self, id: str, summary: str, created: int, custom_fields: List[dict]):
         self.id = id
         self.summary = summary
+        self.created = created,
         self.custom_fields = custom_fields
         self.type = None
         self.priority = None
@@ -85,12 +87,12 @@ class GetIssues:
 
     # Get list of YouTrack issues.
     def get_issues(self) -> List[YouTrackIssue]:
-        api_query = f"{YOUTRACK_URL}/issues?fields=idReadable,summary,customFields(name,value(name))&query={requests.utils.quote(self.query)}"
+        api_query = f"{YOUTRACK_URL}/issues?fields=idReadable,summary,created,customFields(name,value(name))&query={requests.utils.quote(self.query)}"
         response = self.client.get(api_query)
         response.raise_for_status()
 
         data = response.json()
-        youtrack_issues = [YouTrackIssue(issue['idReadable'], issue['summary'], issue['customFields']) for issue in data]
+        youtrack_issues = [YouTrackIssue(issue['idReadable'], issue['summary'], issue['created'], issue['customFields']) for issue in data]
 
         for issue in youtrack_issues:
             issue.id = issue.id
@@ -104,12 +106,12 @@ class GetIssues:
         return youtrack_issues
 
     def get_issues_with_comments(self) -> List[YouTrackIssue]:
-        api_query = f"{YOUTRACK_URL}/issues?fields=idReadable,summary,comments(id,text,author(email),created),customFields(name,value(name))&query={requests.utils.quote(self.query)}"
+        api_query = f"{YOUTRACK_URL}/issues?fields=idReadable,summary,created,comments(id,text,author(email),created),customFields(name,value(name))&query={requests.utils.quote(self.query)}"
         response = self.client.get(api_query)
         response.raise_for_status()
 
         data = response.json()
-        youtrack_issues = [YouTrackIssue(issue['idReadable'], issue['summary'], issue['customFields']) for issue in data]
+        youtrack_issues = [YouTrackIssue(issue['idReadable'], issue['summary'], issue['created'], issue['customFields']) for issue in data]
 
         for issue, issue_data in zip(youtrack_issues, data):
             issue.id = issue.id
@@ -142,6 +144,7 @@ class GetIssues:
 
         issue_priority_counts = {}
         issue_subsystem_counts = {}
+        issue_date_counts = {}
 
         for issue in youtrack_issues:
             if issue.priority:
@@ -154,6 +157,14 @@ class GetIssues:
                     issue_subsystem_counts[issue.subsystem] += 1
                 else:
                     issue_subsystem_counts[issue.subsystem] = 1
+            # Count by creation date
+            if issue.created:
+                print(f"{issue.created} ---->")
+                # Convert timestamp to date
+                created_date = datetime.fromtimestamp(issue.created[0] / 1000).date().strftime('%Y-%m-%d')
+                print(f"{created_date} ---- >")
+                issue_date_counts[created_date] = issue_date_counts.get(created_date, 0) + 1
+                print(f"{issue_date_counts[created_date]}")
 
         print("__")
 
@@ -165,7 +176,9 @@ class GetIssues:
             print(f"{type_name}: {count}")
 
         return { f"{PRIORITY}": issue_priority_counts,
-                 f"{SUBSYSTEM}": issue_subsystem_counts}
+                 f"{SUBSYSTEM}": issue_subsystem_counts,
+                 f"{CREATED_DATE}": issue_date_counts,
+                 }
 
     def get_all_issues_by_priority(self) -> Dict[str, int]:
         youtrack_issues = self.get_issues()

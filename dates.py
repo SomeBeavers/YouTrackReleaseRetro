@@ -1,11 +1,13 @@
 ﻿from datetime import datetime
 
+
+
 release_251 = "251"
 dates251 = "2024-10-28 .. x"
 START_DATE_251 = datetime(2024, 12, 28)
 # END_DATE_251 = datetime(2024, 10, 12)
-
 dates_251_available_in = "2025.1.*"
+planned_251 = "resharper-stat/planned-2025.1"
 
 release_243 = "243"
 dates243_2weeks = "2024-10-13 .. 2024-10-27"
@@ -16,6 +18,7 @@ dates243 = "2024-08-15 .. 2024-10-12"
 START_DATE_243 = datetime(2024, 8, 15)
 END_DATE_243 = datetime(2024, 10, 12)
 dates_243_available_in = "2024.3.*"
+planned_243 = "resharper-stat/planned-2024.3"
 
 release_242 = "242"
 dates242_2weeks = "2024-08-15 .. 2024-08-29"
@@ -50,7 +53,10 @@ current_release_available_in = dates_242_available_in
 current_release_START_DATE = START_DATE_242
 current_release_END_DATE = END_DATE_242
 
-current_release_planned_tag = "resharper-stat/planned-2024.3"
+current_release_planned_tag = planned_243
+
+year_2024 = "2024-01-01 .. 2025-01-01"
+year_2025 = "2025-01-01 .. 2026-01-01"
 
 # REGEXP
 REGEX_FOR_AVAILABLE_VERSION = r'2024\.2\.[^\s]*'

@@ -6,6 +6,9 @@ import numpy as np
 
 import youtrack
 
+import datetime
+from datetime import datetime, timedelta
+
 IMAGES_DIR = os.path.join("reports", "images")
 PRIORITIES = ['Show-stopper', 'Critical', 'Major', 'Normal', 'Minor']
 TYPES = ['Bug', 'Performance Problem', 'Security Problem', 'Exception', 'Usability Problem', 'Cosmetics', 'Improvement', 'Task', 'Feature', 'Plan', ]
@@ -138,7 +141,7 @@ def plot_created_vs_fixed_by_category(categories: list[str], data_created: Dict[
         ax.bar(x + (i - 2) * width, created_values, width, label=f'{key} - created', color=color, alpha=0.4)
 
         # Plotting the fixed bars on top of the created bars
-        rect = ax.bar(x + (i - 2) * width, fixed_values, width, label=f'{key}', color=color)
+        rect = ax.bar(x + (i - 2) * width, fixed_values, width, label=f'{key} - fixed', color=color)
         fixed_bars.append(rect)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
@@ -177,5 +180,70 @@ def plot_created_vs_fixed_by_category(categories: list[str], data_created: Dict[
     fig.tight_layout()
     plt.show()
 
+    image_path = save_plot(fig, title)
+    return image_path
+
+def generate_all_days_in_year(year: int):
+    """
+    Generates a list of all dates in the given year in 'YYYY-MM-DD' format.
+    """
+    start_date = datetime(year, 1, 1)
+    end_date = datetime(year + 1, 1, 1)
+    return [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range((end_date - start_date).days)]
+
+
+def plot_ticket_creation_dates_same_axis(issues_by_date: Dict[str, Dict[str, int]], years: list[int],
+                                         title: str) -> str:
+    """
+    Plots the distribution of ticket creation dates for multiple years on the same x-axis,
+    where only the month and day matter, ignoring the year.
+
+    Args:
+        issues_by_date (Dict[str, Dict[str, int]]): A dictionary where keys are year labels (e.g., 'Year 2024')
+                                                    and values are dictionaries with dates (YYYY-MM-DD) as keys
+                                                    and issue counts as values.
+        years (list[int]): A list of years to include in the plot.
+        title (str): Title of the plot.
+
+    Returns:
+        str: Path to the saved plot image.
+    """
+    fig, ax = plt.subplots(figsize=(18, 6))
+
+    # Define unique markers and colors for each year
+    markers = ['o', 's', '^', 'D', 'P', '*']
+    colors = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']
+
+    # Generate month-day labels for the x-axis
+    month_day_labels = [datetime(2000, month, 1).strftime('%b') for month in range(1, 13)]
+    x_ticks = [datetime(2000, month, 1).timetuple().tm_yday for month in range(1, 13)]
+
+    for idx, year in enumerate(years):
+        # Align the data for the current year based on day of the year
+        year_data = issues_by_date.get(f"Year {year}", {})
+
+        # Create a sorted list of (day_of_year, count) tuples
+        sorted_data = sorted(
+            [(datetime.strptime(date_str, '%Y-%m-%d').timetuple().tm_yday, count) for date_str, count in
+             year_data.items()]
+        )
+        aligned_days, counts = zip(*sorted_data) if sorted_data else ([], [])
+
+        # Plot lines and dots for the current year
+        ax.plot(aligned_days, counts, color=colors[idx % len(colors)], linestyle='-', linewidth=1, label=f'{year}')
+        ax.scatter(aligned_days, counts, color=colors[idx % len(colors)], marker=markers[idx % len(markers)], s=10)
+
+    # Formatting the plot
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel('Date', fontsize=14)
+    ax.set_ylabel('Number of Tickets', fontsize=14)
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(month_day_labels, rotation=45)
+    ax.grid(True)
+    ax.legend()
+
+    plt.tight_layout()
+
+    # Save and return the image path
     image_path = save_plot(fig, title)
     return image_path
