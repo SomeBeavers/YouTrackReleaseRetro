@@ -21,6 +21,7 @@ def initialize_markdown():
         md_file.write("- [Users comments added during release cycle](#users-comments-added-during-release-cycle)\n\n")
         md_file.write("- [Planned vs actually done](#planned-vs-actually-done)\n\n")
         md_file.write("- [Users issues by dates](#users-issues-by-dates)\n\n")
+        md_file.write("- [Regressions found during release cycle](#regressions-found-during-release-cycle)\n\n")
 
 def append_markdown(content: str):
     with open(MARKDOWN_FILE, 'a', encoding='utf-8') as md_file:

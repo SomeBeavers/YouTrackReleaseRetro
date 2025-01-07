@@ -19,6 +19,7 @@ import dates
 from dates import *
 
 import datetime
+from datetime import date, datetime
 
 import ai_analysis
 from ai_analysis import *
@@ -456,11 +457,11 @@ def get_issues_fixed_in_bugfix():
     append_markdown("> Query " + current_release +": " + query)
 
     issues_handler = GetIssues(client, query)
-    issues_available_in_bugfix_242 = issues_handler.get_issues()
+    issues_fixed_in_bugfix = issues_handler.get_issues()
 
     # Sort the issues first by "Available in" (filtered for 2024.2.*), then by "Subsystem", and lastly by "Priority"
     sorted_issues = sorted(
-        issues_available_in_bugfix_242,
+        issues_fixed_in_bugfix,
         key=lambda issue: (
             extract_available_in_value(issue.available_in) if issue.available_in else "",
             issue.subsystem if issue.subsystem else "",
@@ -525,22 +526,33 @@ def get_users_comments():
     # print(issue_comments_data)
     # print("------------------------------------------")
 
-    # Split the data into parts
-    num_splits = 4
-    issue_comments_data_chunks = list(split_dict(issue_comments_data, len(issue_comments_data) // num_splits or 1))
+    # Sort issues by the number of comments in descending order
+    sorted_issues = sorted(issue_comments_data.items(), key=lambda x: len(x[1]), reverse=True)
 
-    ai_responses = []
+    # Get the top 10 issues
+    top_10_issues = sorted_issues[:10]
 
-    for i in range(num_splits):
-        # Pass chunk to AI
-        append_markdown(f"## AI analysis for user's comments (Part {i})")
-        ai_response_part1 = ai_analysis.ask_ai_about_comments(issue_comments_data_chunks[i])
-        append_markdown(f"\n{ai_response_part1}\n")
-        ai_responses.append(ai_response_part1)
+    # Print the results
+    append_markdown("### Top 10 Issues with Most User Comments")
+    for issue_id, comments in top_10_issues:
+        append_markdown(f"- **Issue ID**: {issue_id}, **Comments**: {len(comments)}")
 
-    append_markdown(f"## AI analysis for user's comments (final)")
-    final_response = ai_analysis.ask_ai_about_comments_combine(ai_responses)
-    append_markdown(f"\n{final_response}\n")
+    # # Split the data into parts
+    # num_splits = 4
+    # issue_comments_data_chunks = list(split_dict(issue_comments_data, len(issue_comments_data) // num_splits or 1))
+    #
+    # ai_responses = []
+    #
+    # for i in range(num_splits):
+    #     # Pass chunk to AI
+    #     append_markdown(f"## AI analysis for user's comments (Part {i})")
+    #     ai_response_part1 = ai_analysis.ask_ai_about_comments(issue_comments_data_chunks[i])
+    #     append_markdown(f"\n{ai_response_part1}\n")
+    #     ai_responses.append(ai_response_part1)
+    #
+    # append_markdown(f"## AI analysis for user's comments (final)")
+    # final_response = ai_analysis.ask_ai_about_comments_combine(ai_responses)
+    # append_markdown(f"\n{final_response}\n")
 
 def get_planned_vs_actually_done():
     append_markdown("## Planned vs actually done")
@@ -626,6 +638,7 @@ def get_planned_vs_actually_done():
 def get_users_issues_by_dates():
     append_markdown("## Users issues by dates")
     append_markdown("When do users create more tickets?")
+    append_markdown("The rate at which new defects are reported over time. Helps in understanding the stability of the release. A decreasing defect arrival rate over time usually indicates improving quality.")
 
     # 2025
     dates_query = f"created: {year_2025}"
@@ -655,6 +668,40 @@ def get_users_issues_by_dates():
     plot = plot_ticket_creation_dates_same_axis(created_by_date, [2024, 2025],"Issues created by users (by creation date)")
     append_markdown("![Issues created by users (by creation date)](images/" + os.path.basename(plot) + ")")
 
+def get_regressions_found_during_release_cycle():
+    append_markdown("## Regressions found during release cycle")
+    append_markdown("How many regressions were found during release cycle?")
+
+    # 243
+    dates_243_query = f"created: {dates243}"
+    additional_query = "tag: {.net-regression}"
+    query_243 = f"project:ReSharper and {dates_243_query} and ({additional_query})"
+
+    append_markdown("> Query " + dates_243_query + ": " + query_243)
+
+    issues_handler = GetIssues(client, query_243)
+    issues_243 = issues_handler.get_issues()
+
+    # 242
+    dates_242_query = f"created: {dates242}"
+    additional_query = "tag: {.net-regression}"
+    query_242 = f"project:ReSharper and {dates_242_query} and ({additional_query})"
+
+    issues_handler = GetIssues(client, query_242)
+    issues_242 = issues_handler.get_issues()
+
+    # Count issues
+    issue_counts = {
+        "242": len(issues_242),
+        "243": len(issues_243),
+    }
+
+    # Plot the issue counts
+    plot_title = "Regressions Found During Release Cycle"
+    plot = plot_regressions_by_release(issue_counts, plot_title)
+    append_markdown("![Regressions Found During Release Cycle](images/" + os.path.basename(plot) + ")")
+
+
 #HELPERS
 def extract_available_in_value(available_in: str):
     match = re.search(dates.REGEX_FOR_AVAILABLE_VERSION, available_in)
@@ -679,11 +726,13 @@ def split_dict(input_dict, n):
 # get_issues_in_bugfix() # Bugs created by users between bugfixes #TODO: checked
 # get_issues_fixed_in_bugfix() #TODO: checked
 
-get_users_issues_by_dates()
+# get_users_issues_by_dates() #TODO: checked
 
 # get_planned_vs_actually_done() #TODO: checked
 
-#get_users_comments() #TODO: checked
+# get_regressions_found_during_release_cycle() #TODO: checked
+
+get_users_comments() #TODO: checked
 
 print(f"Report is generated.")
 

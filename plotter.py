@@ -191,7 +191,6 @@ def generate_all_days_in_year(year: int):
     end_date = datetime(year + 1, 1, 1)
     return [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range((end_date - start_date).days)]
 
-
 def plot_ticket_creation_dates_same_axis(issues_by_date: Dict[str, Dict[str, int]], years: list[int],
                                          title: str) -> str:
     """
@@ -241,6 +240,40 @@ def plot_ticket_creation_dates_same_axis(issues_by_date: Dict[str, Dict[str, int
     ax.set_xticklabels(month_day_labels, rotation=45)
     ax.grid(True)
     ax.legend()
+
+    plt.tight_layout()
+
+    # Save and return the image path
+    image_path = save_plot(fig, title)
+    return image_path
+
+def plot_regressions_by_release(issue_counts: Dict[str, int], title: str) -> str:
+    """
+    Plots the count of issues for different releases as a bar chart.
+
+    Args:
+        issue_counts (Dict[str, int]): A dictionary where keys are release identifiers (e.g., '242', '243')
+                                       and values are issue counts.
+        title (str): Title of the plot.
+
+    Returns:
+        str: Path to the saved plot image.
+    """
+    releases = list(issue_counts.keys())
+    counts = list(issue_counts.values())
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.bar(releases, counts, color=['blue', 'orange'])
+
+    # Formatting the plot
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel('Release', fontsize=14)
+    ax.set_ylabel('Number of Regressions', fontsize=14)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Annotating the bar values
+    for i, count in enumerate(counts):
+        ax.text(i, count + 0.5, str(count), ha='center', fontsize=12)
 
     plt.tight_layout()
 
