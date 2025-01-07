@@ -29,6 +29,7 @@ class YouTrackIssue:
         self.available_in = None
         self.comments = []
         self.state = None
+        self.daysInUntriaged = None
 
 
 class GetIssues:
@@ -55,6 +56,12 @@ class GetIssues:
         for field in custom_fields:
             if field['name'] == 'State' and field['value'] is not None:
                 return field['value']['name']
+        return None
+
+    def parse_issue_days_in_untriaged(self, custom_fields: List[dict]) -> int:
+        for field in custom_fields:
+            if field['name'] == 'Days in Untriaged' and field['value'] is not None:
+                return field['value']
         return None
 
     # Get issue subsystem from Custom Fields.
@@ -102,6 +109,7 @@ class GetIssues:
             issue.subsystem = self.parse_issue_subystem(issue.custom_fields)
             issue.available_in = self.parse_issue_Avaiable_in(issue.custom_fields)
             issue.state = self.parse_issue_state(issue.custom_fields)
+            issue.daysInUntriaged = self.parse_issue_days_in_untriaged(issue.custom_fields)
 
         return youtrack_issues
 

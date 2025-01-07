@@ -3,9 +3,9 @@
 
 
 release_251 = "251"
-dates251 = "2024-10-28 .. x"
+dates251 = "2024-10-28 .. 2025-04-02"
 START_DATE_251 = datetime(2024, 12, 28)
-# END_DATE_251 = datetime(2024, 10, 12)
+END_DATE_251 = datetime(2025, 4, 2)
 dates_251_available_in = "2025.1.*"
 planned_251 = "resharper-stat/planned-2025.1"
 

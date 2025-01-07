@@ -701,6 +701,78 @@ def get_regressions_found_during_release_cycle():
     plot = plot_regressions_by_release(issue_counts, plot_title)
     append_markdown("![Regressions Found During Release Cycle](images/" + os.path.basename(plot) + ")")
 
+def get_untriaged_time():
+    append_markdown("## Untriaged time")
+    append_markdown("How much time was spent on untriaged tickets?")
+
+    # 251
+    dates_251_query = f"created: {dates251}"
+    additional_query = "tag: -{moved from Rider} and type: -exception and QA_assigned: -{No qa assigned}"
+    query_251 = f"project:ReSharper and {dates_251_query} and ({additional_query})"
+
+    append_markdown("> Query " + ": " + query_251)
+
+    issues_handler = GetIssues(client, query_251)
+    issues_251 = issues_handler.get_issues()
+
+    # Calculate average daysInUntriaged
+    total_days_in_untriaged = 0
+    count = 0
+
+    for issue in issues_251:
+        if hasattr(issue, 'daysInUntriaged') and issue.daysInUntriaged is not None:
+            total_days_in_untriaged += issue.daysInUntriaged
+            count += 1
+
+    average_days_in_untriaged = total_days_in_untriaged / count if count > 0 else 0
+
+    append_markdown(f"### Average days spent in untriaged state during 251 release cycle: {average_days_in_untriaged:.2f}")
+
+    # 243
+    dates_243_query = f"created: {dates243}"
+    additional_query = "tag: -{moved from Rider} and type: -exception and QA_assigned: -{No qa assigned}"
+    query_243 = f"project:ReSharper and {dates_243_query} and ({additional_query})"
+
+    append_markdown("> Query " + ": " + query_243)
+
+    issues_handler = GetIssues(client, query_243)
+    issues_243 = issues_handler.get_issues()
+
+    # Calculate average daysInUntriaged
+    total_days_in_untriaged = 0
+    count = 0
+
+    for issue in issues_243:
+        if hasattr(issue, 'daysInUntriaged') and issue.daysInUntriaged is not None:
+            total_days_in_untriaged += issue.daysInUntriaged
+            count += 1
+
+    average_days_in_untriaged = total_days_in_untriaged / count if count > 0 else 0
+
+    append_markdown(f"### Average days spent in untriaged state during 243 release cycle: {average_days_in_untriaged:.2f}")
+
+    # 242
+    dates_242_query = f"created: {dates242}"
+
+    query_242 = f"project:ReSharper and {dates_242_query} and ({additional_query})"
+
+    issues_handler = GetIssues(client, query_242)
+    issues_242 = issues_handler.get_issues()
+
+    # Calculate average daysInUntriaged
+    total_days_in_untriaged = 0
+    count = 0
+
+    for issue in issues_242:
+        if hasattr(issue, 'daysInUntriaged') and issue.daysInUntriaged is not None:
+            total_days_in_untriaged += issue.daysInUntriaged
+            count += 1
+
+    average_days_in_untriaged = total_days_in_untriaged / count if count > 0 else 0
+
+    append_markdown(
+        f"### Average days spent in untriaged state during 242 release cycle: {average_days_in_untriaged:.2f}")
+
 
 #HELPERS
 def extract_available_in_value(available_in: str):
@@ -732,7 +804,11 @@ def split_dict(input_dict, n):
 
 # get_regressions_found_during_release_cycle() #TODO: checked
 
-get_users_comments() #TODO: checked
+# get_users_comments() #TODO: checked
+
+# QA queries
+# get_untriaged_time()
+
 
 print(f"Report is generated.")
 
