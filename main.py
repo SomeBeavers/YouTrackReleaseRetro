@@ -16,14 +16,12 @@ from plotter import plot_created_vs_fixed_by_category, plot_multiple_priority_di
 import re
 
 import dates
+from dates import *
+
 import datetime
 
 import ai_analysis
-from ai_analysis import ask_ai_issues_by_types, ask_ai_issues_by_priorities_2_weeks, ask_ai_issues_between_bugfixes
-
-
-
-
+from ai_analysis import *
 
 # Create directories if they don't exist
 os.makedirs(markdown_writer.IMAGES_DIR, exist_ok=True)
@@ -34,24 +32,19 @@ initialize_markdown()
 client = requests.Session()
 client.headers.update(youtrack.headers)
 
-# TODO: update release version
-def extract_2024_2_value(available_in: str):
-    # Use a regex to match "2024.2.*"
-    match = re.search(r'2024\.2\.[^\s]*', available_in)
-    return match.group(0) if match else None
-
 def get_all_issues_count():
     append_markdown("## Issues Created By Subsystems")
     append_markdown("All issues created during release cycle (including issues from jetbrains-team)")
+    append_markdown("Defect Arrival Rate: Helps in understanding the stability of the release. A decreasing defect arrival rate over time usually indicates improving quality.")
 
     # 242
-    cycle_dates_query_242 = f"created: {dates.dates242}"
+    cycle_dates_query_242 = f"created: {dates242}"
     query_242 = f"project:ReSharper and {cycle_dates_query_242}"
+
+    append_markdown("> Query " + release_242 +": " + query_242)
 
     handler = GetIssues(client, query_242)
     issues_242 = handler.get_issues_by()
-    # sorted_subsystems_242 = dict(sorted(issues_242[youtrack.SUBSYSTEM].items(), key=lambda item: item[1], reverse=True))
-
 
     # 241
     cycle_dates_query_241 = f"created: {dates.dates241}"
@@ -60,17 +53,14 @@ def get_all_issues_count():
     handler = GetIssues(client, query_241)
     issues_241 = handler.get_issues_by()
 
-
     created_by_subsystem= {
         f"Release 241": issues_241[youtrack.SUBSYSTEM],
         f"Release 242": issues_242[youtrack.SUBSYSTEM],
-        # f"Release 242": sorted_subsystems_242,
     }
 
     created_by_priority= {
         f"Release 241": issues_241[youtrack.PRIORITY],
         f"Release 242": issues_242[youtrack.PRIORITY],
-        # f"Release 242": sorted_subsystems_242,
     }
 
     plot3 = plot_by_subsystems_several_releases(created_by_subsystem, "Issues created by subsystems", youtrack.SUBSYSTEM)
@@ -82,18 +72,22 @@ def get_all_issues_count():
 def get_issues_created_by_jetbrains_team_vs_fixed():
     # Get tickets created by jetbrains-team
     append_markdown("## Issues Created By jetbrains-team vs Fixed")
+    append_markdown("How many issues were created by jetbrains-team are fixed? Should we adjust testing?")
 
     # 242
-    cycle_dates_query_242 = f"created: {dates.dates242}"
+    cycle_dates_query_242 = f"created: {dates242}"
     additional_query = "created by: jetbrains-team and created by: -dotnet-support"
     query_242 = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query})"
+
+    append_markdown("> Query " + release_242 +": " + query_242)
+
 
     handler = GetIssues(client, query_242)
     issues_by_priority_242 = handler.get_all_issues_by_priority()
     issues_by_type_242 = handler.get_issues_by_type()
 
     # 241
-    cycle_dates_query_241 = f"created: {dates.dates241}"
+    cycle_dates_query_241 = f"created: {dates241}"
     query_241 = f"project:ReSharper and {cycle_dates_query_241} and ({additional_query})"
 
     handler = GetIssues(client, query_241)
@@ -101,7 +95,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     issues_by_type_241 = handler.get_issues_by_type()
 
     # 233
-    cycle_dates_query_233 = f"created: {dates.dates233}"
+    cycle_dates_query_233 = f"created: {dates233}"
     query_233 = f"project:ReSharper and {cycle_dates_query_233} and ({additional_query})"
 
     handler = GetIssues(client, query_233)
@@ -109,7 +103,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     issues_by_type_233 = handler.get_issues_by_type()
 
     # 232
-    cycle_dates_query_232 = f"created: {dates.dates232}"
+    cycle_dates_query_232 = f"created: {dates232}"
     query_232 = f"project:ReSharper and {cycle_dates_query_232} and ({additional_query})"
 
     handler = GetIssues(client, query_232)
@@ -135,6 +129,9 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     # 242
     additional_query_fixed = "created by: jetbrains-team and created by: -dotnet-support and (state: fixed or state: Verified)"
     query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
+
+    append_markdown("> Query " + release_242 +": " + query_242_fixed)
+
 
     handler = GetIssues(client, query_242_fixed)
     fixed_issues_by_priority_242 = handler.get_all_issues_by_priority()
@@ -192,11 +189,14 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     # Get tickets created by users
     append_markdown("## Issues Created By Users vs Fixed")
+    append_markdown("How many users' issues are fixed?")
 
     # 242
-    cycle_dates_query_242 = f"created: {dates.dates242}"
+    cycle_dates_query_242 = f"created: {dates242}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query_242 = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query})"
+
+    append_markdown("> Query " + release_242 +": " + query_242)
 
     handler = GetIssues(client, query_242)
     issues_by_priority_242 = handler.get_all_issues_by_priority()
@@ -240,11 +240,13 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 242": issues_by_type_242,
     }
 
-    # Get fixed tickets created by jetbrains-team
+    # Get fixed tickets created by users
 
     # 242
     additional_query_fixed = "(created by: -jetbrains-team or created by: dotnet-support) and (state: fixed or state: Verified)"
     query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
+
+    append_markdown("> Query " + release_242 + ": " + query_242_fixed)
 
     handler = GetIssues(client, query_242_fixed)
     fixed_issues_by_priority_242 = handler.get_all_issues_by_priority()
@@ -300,13 +302,16 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     # append_markdown(f"\n{ai_response}\n")
 
 def get_issues_created_by_users_2_weeks_after_release():
-    # Bugs created by users 2 weeks after release "project: resharper created by: -jetbrains-team created: 2024-08-15 .. today sort by: priority"
+    # Bugs created by users 2 weeks after release
     append_markdown("## Issues created by users 2 weeks after the release")
+    append_markdown("Is release Ok?")
 
     # 242
-    dates242_2weeks_query = f"created: {dates.dates242_2weeks}"
+    dates242_2weeks_query = f"created: {dates242_2weeks}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query = f"project:ReSharper and {dates242_2weeks_query} and ({additional_query})"
+
+    append_markdown("> Query " + release_242 +": " + query)
 
     issues_handler = GetIssues(client, query)
     issues_by_priority_242 = issues_handler.get_bugs_by_priority()
@@ -390,15 +395,17 @@ def get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release(
     # Write the table to markdown
     write_table(headers, rows)
 
-
 def get_issues_in_bugfix():
     # Bugs created by users in 242 between bugfixes
     append_markdown("## Issues created by users in 242 release between bugfixes")
+    append_markdown("How many issues are there after the bugfix? Are we adding more bugs then we are fixing?")
 
     # 2024.2 - 2024.2.1
-    created_242_1 = f"created: {dates.dates242_1}"
+    created_242_1 = f"created: {dates242_1}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query_242_1 = f"project:ReSharper and {created_242_1} and ({additional_query})"
+
+    append_markdown("> Query " + release_242 +": " + query_242_1)
 
     issues_handler = GetIssues(client, query_242_1)
     issues_by_priority_242_1 = issues_handler.get_bugs_by_priority()
@@ -437,28 +444,25 @@ def get_issues_in_bugfix():
     # handler = GetIssues(client, query_242_1_fixed)
     # fixed_issues_by_priority_242_1 = handler.get_all_issues_by_priority()
 
-
-# Issues fixed in bugfix: Available in: 2024.2.*
 def get_issues_fixed_in_bugfix():
     # Issues fixed in bugfix
     append_markdown("## Issues which were fixed in bugfix")
+    append_markdown("What fixes go to bugfix?")
 
-    # 2024.2.*
-    available_in_bugfix = f"Available in: {dates.dates_242_available_in}"
+    available_in_bugfix = f"Available in: {current_release_available_in}"
     additional_query = "#resolved"
-    query_242_1 = f"project:ReSharper and {available_in_bugfix} and ({additional_query})"
+    query = f"project:ReSharper and {available_in_bugfix} and ({additional_query})"
 
-    issues_handler = GetIssues(client, query_242_1)
+    append_markdown("> Query " + current_release +": " + query)
+
+    issues_handler = GetIssues(client, query)
     issues_available_in_bugfix_242 = issues_handler.get_issues()
-
-    # Function to extract the first matching 2024.2.* value from the "Available in" field
-
 
     # Sort the issues first by "Available in" (filtered for 2024.2.*), then by "Subsystem", and lastly by "Priority"
     sorted_issues = sorted(
         issues_available_in_bugfix_242,
         key=lambda issue: (
-            extract_2024_2_value(issue.available_in) if issue.available_in else "",
+            extract_available_in_value(issue.available_in) if issue.available_in else "",
             issue.subsystem if issue.subsystem else "",
             plotter.PRIORITIES.index(issue.priority) if issue.priority in plotter.PRIORITIES else len(plotter.PRIORITIES)  # Sort by priority based on its index in PRIORITIES
         )
@@ -470,7 +474,7 @@ def get_issues_fixed_in_bugfix():
 
     for issue in sorted_issues:
         # Extract only the 2024.2.* value to display
-        available_in_value = extract_2024_2_value(issue.available_in)
+        available_in_value = extract_available_in_value(issue.available_in)
         if available_in_value:
             rows.append([
                 available_in_value,
@@ -482,33 +486,26 @@ def get_issues_fixed_in_bugfix():
     # Write the table to markdown
     write_table(headers, rows)
 
-def split_dict(input_dict, n):
-    """Helper function to split dictionary into chunks of n items."""
-    iterator = iter(input_dict)
-    for _ in range(0, len(input_dict), n):
-        yield {k: input_dict[k] for k in islice(iterator, n)}
-
-# Get users comments added during release cycle
 def get_users_comments():
     append_markdown("## Users comments added during release cycle")
 
-    # 2024.2.*
-    commented_242 = f"commented: {dates.dates242}"
+    commented = f"commented: {current_release_dates}"
     # additional_query = "#unresolved"
-    query_242 = f"project:ReSharper and ({commented_242}) "
+    query = f"project:ReSharper and ({commented}) "
 
-    issues_handler = GetIssues(client, query_242)
-    issues_242 = issues_handler.get_issues_with_comments()
+    append_markdown("> Query " + current_release +": " + query)
 
+    issues_handler = GetIssues(client, query)
+    issues = issues_handler.get_issues_with_comments()
 
     # Define the date range for filtering comments
-    start_date = dates.START_DATE_242
-    end_date = dates.END_DATE_242
+    start_date = current_release_START_DATE
+    end_date = current_release_END_DATE
 
     issue_comments_data = defaultdict(list)
 
     # Process issues and filter comments based on date and email
-    for issue in issues_242:
+    for issue in issues:
         filtered_comments = []
         for comment in issue.comments:
             # Convert the created timestamp to a datetime object
@@ -528,7 +525,7 @@ def get_users_comments():
     # print(issue_comments_data)
     # print("------------------------------------------")
 
-    # Split the data into two parts
+    # Split the data into parts
     num_splits = 4
     issue_comments_data_chunks = list(split_dict(issue_comments_data, len(issue_comments_data) // num_splits or 1))
 
@@ -545,17 +542,33 @@ def get_users_comments():
     final_response = ai_analysis.ask_ai_about_comments_combine(ai_responses)
     append_markdown(f"\n{final_response}\n")
 
+#HELPERS
+def extract_available_in_value(available_in: str):
+    match = re.search(dates.REGEX_FOR_AVAILABLE_VERSION, available_in)
+    return match.group(0) if match else None
 
-# Run
-# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
-# get_issues_created_by_jetbrains_team_vs_fixed()
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
-# get_issues_created_by_users_2_weeks_after_release()
-get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release() #TODO: checked! Works fine!
+def split_dict(input_dict, n):
+    """Helper function to split dictionary into chunks of n items."""
+    iterator = iter(input_dict)
+    for _ in range(0, len(input_dict), n):
+        yield {k: input_dict[k] for k in islice(iterator, n)}
 
-# get_issues_in_bugfix() # Bugs created by users between bugfixes
-# get_issues_fixed_in_bugfix()
-# get_users_comments()
+# 1. Update dates
+# 2. Run
+# 3. Uncomment AI processing
+
+# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team) #TODO: checked! Works fine!
+# get_issues_created_by_jetbrains_team_vs_fixed() #TODO: checked! Works fine!
+# get_issues_created_by_NOT_jetbrains_team_vs_fixed() #TODO: checked! Works fine!
+# get_issues_created_by_users_2_weeks_after_release() #TODO: checked! Works fine!
+# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release() #TODO: checked! Works fine!
+#
+# get_issues_in_bugfix() # Bugs created by users between bugfixes #TODO: checked! Works fine!
+# get_issues_fixed_in_bugfix() #TODO: checked! Works fine!
+
+# get_planned_vs_actually_done()
+
+#get_users_comments() #TODO: checked! Works fine!
 
 print(f"Report is generated.")
 

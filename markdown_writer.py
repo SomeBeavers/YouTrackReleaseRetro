@@ -11,10 +11,14 @@ def initialize_markdown():
         md_file.write("# ReSharper Release Quality Analysis Report\n\n")
         md_file.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}\n\n")
         md_file.write("## Table of Contents\n")
+        md_file.write("- [Issues Created By Subsystems](#issues-created-by-subsystems)\n")
         md_file.write("- [Issues Created By jetbrains-team vs Fixed](#issues-created-by-jetbrains-team-vs-fixed)\n")
+        md_file.write("- [Issues Created By Users vs Fixed](#issues-created-by-users-vs-fixed)\n")
         md_file.write("- [Issues created by users 2 weeks after the release](#issues-created-by-users-2-weeks-after-the-release)\n")
         md_file.write("- [Issues created by users in 242 release between bugfixes](#issues-created-by-users-in-242-release-between-bugfixes)\n\n")
         md_file.write("- [Status of Show-Stoppers & Criticals created by users 2 weeks after release](#status-of-show-stoppers--criticals-created-by-users-2-weeks-after-release)\n\n")
+        md_file.write("- [Issues which were fixed in bugfix](#issues-which-were-fixed-in-bugfix)\n\n")
+        md_file.write("- [Users comments added during release cycle](#users-comments-added-during-release-cycle)\n\n")
 
 def append_markdown(content: str):
     with open(MARKDOWN_FILE, 'a', encoding='utf-8') as md_file:
