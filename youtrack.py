@@ -26,6 +26,7 @@ class YouTrackIssue:
         self.subsystem = None
         self.available_in = None
         self.comments = []
+        self.state = None
 
 
 class GetIssues:
@@ -44,6 +45,13 @@ class GetIssues:
     def parse_issue_priority(self, custom_fields: List[dict]) -> str:
         for field in custom_fields:
             if field['name'] == 'Priority' and field['value'] is not None:
+                return field['value']['name']
+        return None
+
+    # Get issue state from Custom Fields.
+    def parse_issue_state(self, custom_fields: List[dict]) -> str:
+        for field in custom_fields:
+            if field['name'] == 'State' and field['value'] is not None:
                 return field['value']['name']
         return None
 
@@ -91,6 +99,7 @@ class GetIssues:
             issue.priority = self.parse_issue_priority(issue.custom_fields)
             issue.subsystem = self.parse_issue_subystem(issue.custom_fields)
             issue.available_in = self.parse_issue_Avaiable_in(issue.custom_fields)
+            issue.state = self.parse_issue_state(issue.custom_fields)
 
         return youtrack_issues
 

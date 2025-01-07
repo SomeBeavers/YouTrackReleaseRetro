@@ -14,6 +14,7 @@ def initialize_markdown():
         md_file.write("- [Issues Created By jetbrains-team vs Fixed](#issues-created-by-jetbrains-team-vs-fixed)\n")
         md_file.write("- [Issues created by users 2 weeks after the release](#issues-created-by-users-2-weeks-after-the-release)\n")
         md_file.write("- [Issues created by users in 242 release between bugfixes](#issues-created-by-users-in-242-release-between-bugfixes)\n\n")
+        md_file.write("- [Status of Show-Stoppers & Criticals created by users 2 weeks after release](#status-of-show-stoppers--criticals-created-by-users-2-weeks-after-release)\n\n")
 
 def append_markdown(content: str):
     with open(MARKDOWN_FILE, 'a', encoding='utf-8') as md_file:
