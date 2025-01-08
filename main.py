@@ -45,14 +45,14 @@ def get_all_issues_count():
     append_markdown("> Query " + release_242 +": " + query_242)
 
     handler = GetIssues(client, query_242)
-    issues_242 = handler.get_issues_by()
+    issues_242 = handler.get_issues_count_by_various_parameters()
 
     # 241
     cycle_dates_query_241 = f"created: {dates.dates241}"
     query_241 = f"project:ReSharper and {cycle_dates_query_241}"
 
     handler = GetIssues(client, query_241)
-    issues_241 = handler.get_issues_by()
+    issues_241 = handler.get_issues_count_by_various_parameters()
 
     created_by_subsystem= {
         f"Release 241": issues_241[youtrack.SUBSYSTEM],
@@ -84,32 +84,32 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 
 
     handler = GetIssues(client, query_242)
-    issues_by_priority_242 = handler.get_all_issues_by_priority()
-    issues_by_type_242 = handler.get_issues_by_type()
+    issues_by_priority_242 = handler.get_issues_count_by_priority()
+    issues_by_type_242 = handler.get_issues_count_by_type()
 
     # 241
     cycle_dates_query_241 = f"created: {dates241}"
     query_241 = f"project:ReSharper and {cycle_dates_query_241} and ({additional_query})"
 
     handler = GetIssues(client, query_241)
-    issues_by_priority_241 = handler.get_all_issues_by_priority()
-    issues_by_type_241 = handler.get_issues_by_type()
+    issues_by_priority_241 = handler.get_issues_count_by_priority()
+    issues_by_type_241 = handler.get_issues_count_by_type()
 
     # 233
     cycle_dates_query_233 = f"created: {dates233}"
     query_233 = f"project:ReSharper and {cycle_dates_query_233} and ({additional_query})"
 
     handler = GetIssues(client, query_233)
-    issues_by_priority_233 = handler.get_all_issues_by_priority()
-    issues_by_type_233 = handler.get_issues_by_type()
+    issues_by_priority_233 = handler.get_issues_count_by_priority()
+    issues_by_type_233 = handler.get_issues_count_by_type()
 
     # 232
     cycle_dates_query_232 = f"created: {dates232}"
     query_232 = f"project:ReSharper and {cycle_dates_query_232} and ({additional_query})"
 
     handler = GetIssues(client, query_232)
-    issues_by_priority_232 = handler.get_all_issues_by_priority()
-    issues_by_type_232 = handler.get_issues_by_type()
+    issues_by_priority_232 = handler.get_issues_count_by_priority()
+    issues_by_type_232 = handler.get_issues_count_by_type()
 
     created_by_jetbrains_team = {
         f"Release 232 ({cycle_dates_query_232})": issues_by_priority_232,
@@ -135,29 +135,29 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
 
 
     handler = GetIssues(client, query_242_fixed)
-    fixed_issues_by_priority_242 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_242 = handler.get_issues_by_type()
+    fixed_issues_by_priority_242 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_242 = handler.get_issues_count_by_type()
 
     # 241
     query_241_fixed = f"project:ReSharper and {cycle_dates_query_241} and {additional_query_fixed}"
 
     handler = GetIssues(client, query_241_fixed)
-    fixed_issues_by_priority_241 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_241 = handler.get_issues_by_type()
+    fixed_issues_by_priority_241 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_241 = handler.get_issues_count_by_type()
 
     # 233
     query_233_fixed = f"project:ReSharper and {cycle_dates_query_233} and {additional_query_fixed}"
 
     handler = GetIssues(client, query_233_fixed)
-    fixed_issues_by_priority_233 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_233 = handler.get_issues_by_type()
+    fixed_issues_by_priority_233 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_233 = handler.get_issues_count_by_type()
 
     # 232
     query_232_fixed = f"project:ReSharper and {cycle_dates_query_232} and {additional_query_fixed}"
 
     handler = GetIssues(client, query_232_fixed)
-    fixed_issues_by_priority_232 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_232 = handler.get_issues_by_type()
+    fixed_issues_by_priority_232 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_232 = handler.get_issues_count_by_type()
 
     fixed_by_jetbrains_team = {
         f"Release 232 ({cycle_dates_query_232})": fixed_issues_by_priority_232,
@@ -200,32 +200,32 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     append_markdown("> Query " + release_242 +": " + query_242)
 
     handler = GetIssues(client, query_242)
-    issues_by_priority_242 = handler.get_all_issues_by_priority()
-    issues_by_type_242 = handler.get_issues_by_type()
+    issues_by_priority_242 = handler.get_issues_count_by_priority()
+    issues_by_type_242 = handler.get_issues_count_by_type()
 
     # 241
     cycle_dates_query_241 = f"created: {dates.dates241}"
     query_241 = f"project:ReSharper and {cycle_dates_query_241} and ({additional_query})"
 
     handler = GetIssues(client, query_241)
-    issues_by_priority_241 = handler.get_all_issues_by_priority()
-    issues_by_type_241 = handler.get_issues_by_type()
+    issues_by_priority_241 = handler.get_issues_count_by_priority()
+    issues_by_type_241 = handler.get_issues_count_by_type()
 
     # 233
     cycle_dates_query_233 = f"created: {dates.dates233}"
     query_233 = f"project:ReSharper and {cycle_dates_query_233} and ({additional_query})"
 
     handler = GetIssues(client, query_233)
-    issues_by_priority_233 = handler.get_all_issues_by_priority()
-    issues_by_type_233 = handler.get_issues_by_type()
+    issues_by_priority_233 = handler.get_issues_count_by_priority()
+    issues_by_type_233 = handler.get_issues_count_by_type()
 
     # 232
     cycle_dates_query_232 = f"created: {dates.dates232}"
     query_232 = f"project:ReSharper and {cycle_dates_query_232} and ({additional_query})"
 
     handler = GetIssues(client, query_232)
-    issues_by_priority_232 = handler.get_all_issues_by_priority()
-    issues_by_type_232 = handler.get_issues_by_type()
+    issues_by_priority_232 = handler.get_issues_count_by_priority()
+    issues_by_type_232 = handler.get_issues_count_by_type()
 
     created_issues_by_priority = {
         f"Release 232 ({cycle_dates_query_232})": issues_by_priority_232,
@@ -250,29 +250,29 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     append_markdown("> Query " + release_242 + ": " + query_242_fixed)
 
     handler = GetIssues(client, query_242_fixed)
-    fixed_issues_by_priority_242 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_242 = handler.get_issues_by_type()
+    fixed_issues_by_priority_242 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_242 = handler.get_issues_count_by_type()
 
     # 241
     query_241_fixed = f"project:ReSharper and {cycle_dates_query_241} and {additional_query_fixed}"
 
     handler = GetIssues(client, query_241_fixed)
-    fixed_issues_by_priority_241 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_241 = handler.get_issues_by_type()
+    fixed_issues_by_priority_241 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_241 = handler.get_issues_count_by_type()
 
     # 233
     query_233_fixed = f"project:ReSharper and {cycle_dates_query_233} and {additional_query_fixed}"
 
     handler = GetIssues(client, query_233_fixed)
-    fixed_issues_by_priority_233 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_233 = handler.get_issues_by_type()
+    fixed_issues_by_priority_233 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_233 = handler.get_issues_count_by_type()
 
     # 232
     query_232_fixed = f"project:ReSharper and {cycle_dates_query_232} and {additional_query_fixed}"
 
     handler = GetIssues(client, query_232_fixed)
-    fixed_issues_by_priority_232 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_232 = handler.get_issues_by_type()
+    fixed_issues_by_priority_232 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_232 = handler.get_issues_count_by_type()
 
     fixed_issues_by_priority = {
         f"Release 232 ({cycle_dates_query_232})": fixed_issues_by_priority_232,
@@ -315,7 +315,7 @@ def get_issues_created_by_users_2_weeks_after_release():
     append_markdown("> Query " + release_242 +": " + query)
 
     issues_handler = GetIssues(client, query)
-    issues_by_priority_242 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_242 = issues_handler.get_bugs_count_by_priority()
     # issues_handler.plot_issues_by_priority(issues_by_priority_242, cycle_dates_query_242)
 
     # 241
@@ -323,7 +323,7 @@ def get_issues_created_by_users_2_weeks_after_release():
     query = f"project:ReSharper and {dates241_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
-    issues_by_priority_241 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_241 = issues_handler.get_bugs_count_by_priority()
     # issues_handler.plot_issues_by_priority(issues_by_priority_241, cycle_dates_query_241)
 
     # 233
@@ -331,14 +331,14 @@ def get_issues_created_by_users_2_weeks_after_release():
     query = f"project:ReSharper and {dates233_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
-    issues_by_priority_233 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_233 = issues_handler.get_bugs_count_by_priority()
 
     # 232
     dates232_2weeks_query = f"created: {dates.dates232_2weeks}"
     query = f"project:ReSharper and {dates232_2weeks_query} and ({additional_query})"
 
     issues_handler = GetIssues(client, query)
-    issues_by_priority_232 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_232 = issues_handler.get_bugs_count_by_priority()
 
     priority_dicts = {
         f"Release 232 ({dates232_2weeks_query})": issues_by_priority_232,
@@ -409,21 +409,21 @@ def get_issues_in_bugfix():
     append_markdown("> Query " + release_242 +": " + query_242_1)
 
     issues_handler = GetIssues(client, query_242_1)
-    issues_by_priority_242_1 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_242_1 = issues_handler.get_bugs_count_by_priority()
 
     # 2024.2.1 - 2024.2.2
     created_242_2 = f"created: {dates.dates242_2}"
     query_242_2 = f"project:ReSharper and {created_242_2} and ({additional_query})"
 
     issues_handler = GetIssues(client, query_242_2)
-    issues_by_priority_242_2 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_242_2 = issues_handler.get_bugs_count_by_priority()
 
     # 2024.2.2 - 2024.2.3
     created_242_3 = f"created: {dates.dates242_3}"
     query_242_3 = f"project:ReSharper and {created_242_3} and ({additional_query})"
 
     issues_handler = GetIssues(client, query_242_3)
-    issues_by_priority_242_3 = issues_handler.get_bugs_by_priority()
+    issues_by_priority_242_3 = issues_handler.get_bugs_count_by_priority()
 
     created_by_users = {
         f"2024.2 - 2024.2.1": issues_by_priority_242_1,
@@ -537,22 +537,22 @@ def get_users_comments():
     for issue_id, comments in top_10_issues:
         append_markdown(f"- **Issue ID**: {issue_id}, **Comments**: {len(comments)}")
 
-    # # Split the data into parts
-    # num_splits = 4
-    # issue_comments_data_chunks = list(split_dict(issue_comments_data, len(issue_comments_data) // num_splits or 1))
-    #
-    # ai_responses = []
-    #
-    # for i in range(num_splits):
-    #     # Pass chunk to AI
-    #     append_markdown(f"## AI analysis for user's comments (Part {i})")
-    #     ai_response_part1 = ai_analysis.ask_ai_about_comments(issue_comments_data_chunks[i])
-    #     append_markdown(f"\n{ai_response_part1}\n")
-    #     ai_responses.append(ai_response_part1)
-    #
-    # append_markdown(f"## AI analysis for user's comments (final)")
-    # final_response = ai_analysis.ask_ai_about_comments_combine(ai_responses)
-    # append_markdown(f"\n{final_response}\n")
+    # Split the data into parts
+    num_splits = 4
+    issue_comments_data_chunks = list(split_dict(issue_comments_data, len(issue_comments_data) // num_splits or 1))
+
+    ai_responses = []
+
+    for i in range(num_splits):
+        # Pass chunk to AI
+        append_markdown(f"### AI analysis for user's comments (Part {i})")
+        ai_response_part1 = ai_analysis.ask_ai_about_comments(issue_comments_data_chunks[i])
+        append_markdown(f"\n{ai_response_part1}\n")
+        ai_responses.append(ai_response_part1)
+
+    append_markdown(f"### AI analysis for user's comments (final)")
+    final_response = ai_analysis.ask_ai_about_comments_combine(ai_responses)
+    append_markdown(f"\n{final_response}\n")
 
 def get_planned_vs_actually_done():
     append_markdown("## Planned vs actually done")
@@ -566,8 +566,8 @@ def get_planned_vs_actually_done():
     append_markdown("> Query " + release_251 +": " + query_251)
 
     handler = GetIssues(client, query_251)
-    issues_by_priority_251 = handler.get_all_issues_by_priority()
-    issues_by_type_251 = handler.get_issues_by_type()
+    issues_by_priority_251 = handler.get_issues_count_by_priority()
+    issues_by_type_251 = handler.get_issues_count_by_type()
 
     # 243
     additional_query = f"tag: {planned_243}"
@@ -576,8 +576,8 @@ def get_planned_vs_actually_done():
     append_markdown("> Query " + release_243 +": " + query_243)
 
     handler = GetIssues(client, query_243)
-    issues_by_priority_243 = handler.get_all_issues_by_priority()
-    issues_by_type_243 = handler.get_issues_by_type()
+    issues_by_priority_243 = handler.get_issues_count_by_priority()
+    issues_by_type_243 = handler.get_issues_count_by_type()
 
     planned_issues_by_priority = {
         f"Planned for 243": issues_by_priority_243,
@@ -598,8 +598,8 @@ def get_planned_vs_actually_done():
     append_markdown("> Query " + release_251 + ": " + query_251_fixed)
 
     handler = GetIssues(client, query_251_fixed)
-    fixed_issues_by_priority_251 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_251 = handler.get_issues_by_type()
+    fixed_issues_by_priority_251 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_251 = handler.get_issues_count_by_type()
 
     # 243
     additional_query_fixed = f"tag: {planned_243} and (state: fixed or state: Verified)"
@@ -608,8 +608,8 @@ def get_planned_vs_actually_done():
     append_markdown("> Query " + release_243 + ": " + query_243_fixed)
 
     handler = GetIssues(client, query_243_fixed)
-    fixed_issues_by_priority_243 = handler.get_all_issues_by_priority()
-    fixed_issues_by_type_243 = handler.get_issues_by_type()
+    fixed_issues_by_priority_243 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_243 = handler.get_issues_count_by_type()
 
     fixed_planned_issues_by_priority = {
         f"Planned for 243": fixed_issues_by_priority_243,
@@ -648,7 +648,7 @@ def get_users_issues_by_dates():
     append_markdown("> Query " + year_2024 + ": " + query_2025)
 
     issues_handler = GetIssues(client, query_2025)
-    issues_by_date_2025 = issues_handler.get_issues_by()
+    issues_by_date_2025 = issues_handler.get_issues_count_by_various_parameters()
 
     # 2024
     dates_query = f"created: {year_2024}"
@@ -658,7 +658,7 @@ def get_users_issues_by_dates():
     append_markdown("> Query " + year_2024 + ": " + query_2024)
 
     issues_handler = GetIssues(client, query_2024)
-    issues_by_date_2024 = issues_handler.get_issues_by()
+    issues_by_date_2024 = issues_handler.get_issues_count_by_various_parameters()
 
     created_by_date= {
         f"Year 2024": issues_by_date_2024[youtrack.CREATED_DATE],
@@ -804,7 +804,7 @@ def split_dict(input_dict, n):
 
 # get_regressions_found_during_release_cycle() #TODO: checked
 
-# get_users_comments() #TODO: checked
+# get_users_comments() #TODO: fully functional with enabled AI
 
 # QA queries
 # get_untriaged_time()

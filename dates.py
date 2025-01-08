@@ -42,21 +42,16 @@ release_232 = "232"
 dates232_2weeks = "2023-08-02 .. 2023-08-16"
 dates232 = "2023-04-05 .. 2023-08-01"
 
-
-# TODO: update values below
-# CURRENT DATES
-current_release = release_242
-current_release_dates = dates242
-current_release_2weeks = dates242_2weeks
-current_release_available_in = dates_242_available_in
-
-current_release_START_DATE = START_DATE_242
-current_release_END_DATE = END_DATE_242
-
-current_release_planned_tag = planned_243
-
 year_2024 = "2024-01-01 .. 2025-01-01"
 year_2025 = "2025-01-01 .. 2026-01-01"
 
-# REGEXP
-REGEX_FOR_AVAILABLE_VERSION = r'2024\.2\.[^\s]*'
+# TODO: update values below
+# CURRENT DATES
+current_release = release_243
+current_release_dates = dates243
+current_release_2weeks = dates243_2weeks
+current_release_available_in = dates_243_available_in
+current_release_START_DATE = START_DATE_243
+current_release_END_DATE = END_DATE_243
+current_release_planned_tag = planned_243
+REGEX_FOR_AVAILABLE_VERSION = r'2024\.3\.[^\s]*'

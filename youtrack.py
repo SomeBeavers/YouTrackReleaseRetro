@@ -37,7 +37,7 @@ class GetIssues:
         self.client = client
         self.query = query
 
-    # Get issue type from Custom Fields.
+    # region Methods for parsing custom fields of issue
     def parse_issue_type(self, custom_fields: List[dict]) -> str:
         for field in custom_fields:
             if field['name'] == 'Type' and field['value'] is not None:
@@ -91,6 +91,7 @@ class GetIssues:
                     return value['name']
 
         return None  # Return None if 'Available in' is not found
+    # endregion
 
     # Get list of YouTrack issues.
     def get_issues(self) -> List[YouTrackIssue]:
@@ -145,9 +146,21 @@ class GetIssues:
 
         return youtrack_issues
 
+    """
+    Aggregates and counts issues by various parameters.
 
-    #Dict[str, Dict[str, int]]
-    def get_issues_by(self) -> Dict[str, Dict[str, int]]:
+    This method retrieves issues and calculates the count of issues grouped by:
+    - Priority: Counts issues based on their priority levels.
+    - Subsystem: Counts issues based on the subsystem they belong to.
+    - Creation Date: Counts issues grouped by their creation date (in 'YYYY-MM-DD' format).
+
+    Returns:
+        Dict[str, Dict[str, int]]: A dictionary containing counts for each parameter:
+            - "priority": A dictionary with priority levels as keys and their respective counts as values.
+            - "subsystem": A dictionary with subsystem names as keys and their respective counts as values.
+            - "created_date": A dictionary with creation dates (in 'YYYY-MM-DD') as keys and their respective counts as values.
+    """
+    def get_issues_count_by_various_parameters(self) -> Dict[str, Dict[str, int]]:
         youtrack_issues = self.get_issues()
 
         issue_priority_counts = {}
@@ -188,7 +201,7 @@ class GetIssues:
                  f"{CREATED_DATE}": issue_date_counts,
                  }
 
-    def get_all_issues_by_priority(self) -> Dict[str, int]:
+    def get_issues_count_by_priority(self) -> Dict[str, int]:
         youtrack_issues = self.get_issues()
 
         issue_priority_counts = {}
@@ -207,8 +220,7 @@ class GetIssues:
 
         return issue_priority_counts
 
-
-    def get_bugs_by_priority(self) -> Dict[str, int]:
+    def get_bugs_count_by_priority(self) -> Dict[str, int]:
         youtrack_issues = self.get_issues()
 
         issue_priority_counts = {}
@@ -227,7 +239,7 @@ class GetIssues:
 
         return issue_priority_counts
 
-    def get_issues_by_type(self) -> Dict[str, int]:
+    def get_issues_count_by_type(self) -> Dict[str, int]:
         youtrack_issues = self.get_issues()
 
         issue_type_counts = {}
