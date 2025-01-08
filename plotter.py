@@ -13,6 +13,7 @@ IMAGES_DIR = os.path.join("reports", "images")
 PRIORITIES = ['Show-stopper', 'Critical', 'Major', 'Normal', 'Minor']
 TYPES = ['Bug', 'Performance Problem', 'Security Problem', 'Exception', 'Usability Problem', 'Cosmetics', 'Improvement', 'Task', 'Feature', 'Plan', ]
 
+#region Helpers
 def save_plot(fig, title: str) -> str:
     # Generate a safe filename
     filename = f"{title.replace(' ', '_').lower()}.png"
@@ -20,6 +21,15 @@ def save_plot(fig, title: str) -> str:
     fig.savefig(filepath, bbox_inches='tight')
     plt.close(fig)  # Close the figure to free memory
     return filepath
+
+def generate_all_days_in_year(year: int):
+    """
+    Generates a list of all dates in the given year in 'YYYY-MM-DD' format.
+    """
+    start_date = datetime(year, 1, 1)
+    end_date = datetime(year + 1, 1, 1)
+    return [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range((end_date - start_date).days)]
+#endregion
 
 def plot_issues_by_type(issue_type_counts: Dict[str, int], dates: str) -> str:
     # Sort issue types by count in descending order
@@ -74,7 +84,7 @@ def plot_by_subsystems_several_releases(issues: Dict[str, Dict[str, int]], title
     image_path = save_plot(fig, title)
     return image_path
 
-def plot_multiple_priority_dicts(issues: Dict[str, Dict[str, int]], title: str, category: str) -> str:
+def plot_by_priority_several_releases(issues: Dict[str, Dict[str, int]], title: str, category: str) -> str:
     # Setting up the bar width
     bar_width = 0.2  # Adjust this to fit your needs
     index = 0
@@ -82,23 +92,23 @@ def plot_multiple_priority_dicts(issues: Dict[str, Dict[str, int]], title: str, 
     if category == youtrack.PRIORITY:
         index = np.arange(len(PRIORITIES))
         fig = plt.figure(figsize=(12, 6))
-    if category == youtrack.SUBSYSTEM:
-        all_subsystems = set()
-        for subsystem_counts in issues.values():
-            all_subsystems.update(subsystem_counts.keys())
-        subsystems = sorted(all_subsystems)
-        index = np.arange(len(subsystems))
-        fig = plt.figure(figsize=(18, 8))
+    # if category == youtrack.SUBSYSTEM:
+    #     all_subsystems = set()
+    #     for subsystem_counts in issues.values():
+    #         all_subsystems.update(subsystem_counts.keys())
+    #     subsystems = sorted(all_subsystems)
+    #     index = np.arange(len(subsystems))
+    #     fig = plt.figure(figsize=(18, 8))
 
 
     if category == youtrack.PRIORITY:
         for i, (label, priority_counts) in enumerate(issues.items()):
             counts = [priority_counts.get(priority, 0) for priority in PRIORITIES]
             plt.bar(index + i * bar_width, counts, bar_width, label=label)
-    if category == youtrack.SUBSYSTEM:
-        for i, (label, subsystem_counts) in enumerate(issues.items()):
-            counts = [subsystem_counts.get(subsystem, 0) for subsystem in subsystems]
-            plt.bar(index + i * bar_width, counts, bar_width, label=label)
+    # if category == youtrack.SUBSYSTEM:
+    #     for i, (label, subsystem_counts) in enumerate(issues.items()):
+    #         counts = [subsystem_counts.get(subsystem, 0) for subsystem in subsystems]
+    #         plt.bar(index + i * bar_width, counts, bar_width, label=label)
 
     # Adding titles and labels
     plt.title(title)
@@ -106,8 +116,8 @@ def plot_multiple_priority_dicts(issues: Dict[str, Dict[str, int]], title: str, 
     plt.ylabel('Number of Issues')
     if category == youtrack.PRIORITY:
         plt.xticks(index + bar_width * (len(issues) - 1) / 2, PRIORITIES, rotation=45)
-    if category == youtrack.SUBSYSTEM:
-        plt.xticks(index + bar_width * (len(issues) - 1) / 2, subsystems, rotation=90)
+    # if category == youtrack.SUBSYSTEM:
+    #     plt.xticks(index + bar_width * (len(issues) - 1) / 2, subsystems, rotation=90)
     plt.legend()
     plt.tight_layout()
 
@@ -145,7 +155,7 @@ def plot_created_vs_fixed_by_category(categories: list[str], data_created: Dict[
         fixed_bars.append(rect)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_xlabel('Priority')
+    ax.set_xlabel('Category')
     ax.set_ylabel('Count')
     ax.set_title(title)
     ax.set_xticks(x)
@@ -183,16 +193,7 @@ def plot_created_vs_fixed_by_category(categories: list[str], data_created: Dict[
     image_path = save_plot(fig, title)
     return image_path
 
-def generate_all_days_in_year(year: int):
-    """
-    Generates a list of all dates in the given year in 'YYYY-MM-DD' format.
-    """
-    start_date = datetime(year, 1, 1)
-    end_date = datetime(year + 1, 1, 1)
-    return [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range((end_date - start_date).days)]
-
-def plot_ticket_creation_dates_same_axis(issues_by_date: Dict[str, Dict[str, int]], years: list[int],
-                                         title: str) -> str:
+def plot_ticket_creation_dates_same_axis(issues_by_date: Dict[str, Dict[str, int]], years: list[int], title: str) -> str:
     """
     Plots the distribution of ticket creation dates for multiple years on the same x-axis,
     where only the month and day matter, ignoring the year.
@@ -247,7 +248,7 @@ def plot_ticket_creation_dates_same_axis(issues_by_date: Dict[str, Dict[str, int
     image_path = save_plot(fig, title)
     return image_path
 
-def plot_regressions_by_release(issue_counts: Dict[str, int], title: str) -> str:
+def plot_count_issues_as_bars(issue_counts: Dict[str, int], title: str) -> str:
     """
     Plots the count of issues for different releases as a bar chart.
 
@@ -268,7 +269,7 @@ def plot_regressions_by_release(issue_counts: Dict[str, int], title: str) -> str
     # Formatting the plot
     ax.set_title(title, fontsize=16)
     ax.set_xlabel('Release', fontsize=14)
-    ax.set_ylabel('Number of Regressions', fontsize=14)
+    ax.set_ylabel('Number of '+ title, fontsize=14)
     ax.grid(axis='y', linestyle='--', alpha=0.7)
 
     # Annotating the bar values

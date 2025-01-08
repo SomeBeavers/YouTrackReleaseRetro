@@ -34,15 +34,24 @@ client = requests.Session()
 client.headers.update(youtrack.headers)
 
 def get_all_issues_count():
-    append_markdown("## Issues Created By Subsystems")
-    append_markdown("All issues created during release cycle (including issues from jetbrains-team)")
+    append_markdown("## Issues Created During Release Cycle (including issues from jetbrains-team)")
     append_markdown("Defect Arrival Rate: Helps in understanding the stability of the release. A decreasing defect arrival rate over time usually indicates improving quality.")
 
+    # TODO: add new release here (copy previous + update)
+
+    # 243
+    cycle_dates_query_243 = f"created: {dates243}"
+    query_243 = f"project:ReSharper and {cycle_dates_query_243}"
+
+    append_markdown("> Query : " + query_243)
+
+    handler = GetIssues(client, query_243)
+    issues_243 = handler.get_issues_count_by_various_parameters()
+
+    #region Old releases
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
     query_242 = f"project:ReSharper and {cycle_dates_query_242}"
-
-    append_markdown("> Query " + release_242 +": " + query_242)
 
     handler = GetIssues(client, query_242)
     issues_242 = handler.get_issues_count_by_various_parameters()
@@ -54,21 +63,37 @@ def get_all_issues_count():
     handler = GetIssues(client, query_241)
     issues_241 = handler.get_issues_count_by_various_parameters()
 
+    #endregion
+
     created_by_subsystem= {
         f"Release 241": issues_241[youtrack.SUBSYSTEM],
         f"Release 242": issues_242[youtrack.SUBSYSTEM],
+        f"Release 243": issues_243[youtrack.SUBSYSTEM],
+        # TODO: add new release here
     }
 
     created_by_priority= {
         f"Release 241": issues_241[youtrack.PRIORITY],
         f"Release 242": issues_242[youtrack.PRIORITY],
+        f"Release 243": issues_243[youtrack.PRIORITY],
+        # TODO: add new release here
     }
 
     plot3 = plot_by_subsystems_several_releases(created_by_subsystem, "Issues created by subsystems", youtrack.SUBSYSTEM)
     append_markdown("![Issues created 'by subsystem'](images/" + os.path.basename(plot3) + ")")
 
-    plot4 = plot_multiple_priority_dicts(created_by_priority, "Issues created by priority", youtrack.PRIORITY)
+    # Send data to AI
+    append_markdown("### AI analysis")
+    ai_response = ask_ai_issues_count_by_subsystem_several_releases(created_by_subsystem)
+    append_markdown(f"\n{ai_response}\n")
+
+    plot4 = plot_by_priority_several_releases(created_by_priority, "Issues created by priority", youtrack.PRIORITY)
     append_markdown("![Issues created by priority](images/" + os.path.basename(plot4) + ")")
+
+    # Send data to AI
+    append_markdown("### AI analysis")
+    ai_response = ask_ai_issues_count_by_priority_several_releases(created_by_priority)
+    append_markdown(f"\n{ai_response}\n")
 
 def get_issues_created_by_jetbrains_team_vs_fixed():
     # Get tickets created by jetbrains-team
@@ -347,7 +372,7 @@ def get_issues_created_by_users_2_weeks_after_release():
         f"Release 242 ({dates242_2weeks_query})": issues_by_priority_242,
     }
 
-    plot3 = plot_multiple_priority_dicts(priority_dicts, "Issues created by users 2 weeks after the release", youtrack.PRIORITY)
+    plot3 = plot_by_priority_several_releases(priority_dicts, "Issues created by users 2 weeks after the release", youtrack.PRIORITY)
     append_markdown("![Issues created by jetbrains-team by priority](images/" + os.path.basename(plot3) + ")")
 
     # # Send data to AI
@@ -431,7 +456,7 @@ def get_issues_in_bugfix():
         f"2024.2.2 - 2024.2.3": issues_by_priority_242_3,
     }
 
-    plot4 = plot_multiple_priority_dicts(created_by_users, "Issues created by users between bugfixes", youtrack.PRIORITY)
+    plot4 = plot_by_priority_several_releases(created_by_users, "Issues created by users between bugfixes", youtrack.PRIORITY)
     append_markdown("![Issues created by jetbrains-team by priority](images/" + os.path.basename(plot4) + ")")
 
     # # Send data to AI
@@ -698,7 +723,7 @@ def get_regressions_found_during_release_cycle():
 
     # Plot the issue counts
     plot_title = "Regressions Found During Release Cycle"
-    plot = plot_regressions_by_release(issue_counts, plot_title)
+    plot = plot_count_issues_as_bars(issue_counts, plot_title)
     append_markdown("![Regressions Found During Release Cycle](images/" + os.path.basename(plot) + ")")
 
 def get_untriaged_time():
@@ -790,23 +815,22 @@ def split_dict(input_dict, n):
 # 3. Uncomment AI processing TODO: check that AI queries are correct!!!
 
 # get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team) #TODO: checked
-# get_issues_created_by_jetbrains_team_vs_fixed() #TODO: checked
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed() #TODO: checked
-# get_issues_created_by_users_2_weeks_after_release() #TODO: checked
-# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release() #TODO: checked
+get_issues_created_by_jetbrains_team_vs_fixed()
+# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
+# get_issues_created_by_users_2_weeks_after_release()
+# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
 #
-# get_issues_in_bugfix() # Bugs created by users between bugfixes #TODO: checked
-# get_issues_fixed_in_bugfix() #TODO: checked
+# get_issues_in_bugfix() # Bugs created by users between bugfixes
+# get_issues_fixed_in_bugfix()
+#
+# get_users_issues_by_dates()
+#
+# get_planned_vs_actually_done()
+#
+# get_regressions_found_during_release_cycle()
 
-# get_users_issues_by_dates() #TODO: checked
+# get_users_comments() #TODO: checked
 
-# get_planned_vs_actually_done() #TODO: checked
-
-# get_regressions_found_during_release_cycle() #TODO: checked
-
-# get_users_comments() #TODO: fully functional with enabled AI
-
-# QA queries
 # get_untriaged_time()
 
 

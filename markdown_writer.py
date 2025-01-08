@@ -11,7 +11,7 @@ def initialize_markdown():
         md_file.write("# ReSharper Release Quality Analysis Report\n\n")
         md_file.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}\n\n")
         md_file.write("## Table of Contents\n")
-        md_file.write("- [Issues Created By Subsystems](#issues-created-by-subsystems)\n")
+        md_file.write("- [Issues Created During Release Cycle (including issues from jetbrains-team)](#issues-created-during-release-cycle-including-issues-from-jetbrains-team)\n")
         md_file.write("- [Issues Created By jetbrains-team vs Fixed](#issues-created-by-jetbrains-team-vs-fixed)\n")
         md_file.write("- [Issues Created By Users vs Fixed](#issues-created-by-users-vs-fixed)\n")
         md_file.write("- [Issues created by users 2 weeks after the release](#issues-created-by-users-2-weeks-after-the-release)\n")

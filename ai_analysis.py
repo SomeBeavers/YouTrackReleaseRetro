@@ -23,7 +23,7 @@ AI_COMMENTS_MESSAGE = """
     Create a .md table with the results of the analysis: how many issues (positive, negative, neutral) are there and the common theme and the reason of the selected mood. YOU MUST show only table in the reply.
     """
 
-AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES = """
+AI_CONTENT_MESSAGE = """
     Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
 
     1. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
@@ -48,7 +48,7 @@ def ask_ai_issues_by_types(created: Dict[str, Dict[str, int]], fixed: Dict[str, 
          "content": AI_SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
+            "content": AI_CONTENT_MESSAGE
         },
         {
             "role": "user",
@@ -79,6 +79,80 @@ def ask_ai_issues_by_types(created: Dict[str, Dict[str, int]], fixed: Dict[str, 
 
     return ai_response
 
+def ask_ai_issues_count_by_subsystem_several_releases(issues: Dict[str, Dict[str, int]]):
+    # global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues created during release cycle in each product's subsystem:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in issues.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_issues_count_by_priority_several_releases(issues: Dict[str, Dict[str, int]]):
+    # global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues created during release cycle by priority:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in issues.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
 def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
     #global client
     client = OpenAI()
@@ -89,7 +163,7 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
          "content": AI_SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
+            "content": AI_CONTENT_MESSAGE
         },
         {
             "role": "user",
@@ -126,7 +200,7 @@ def ask_ai_issues_between_bugfixes(data: Dict[str, Dict[str, int]]) -> str:
          "content": AI_SYSTEM_MESSAGE},
         {
             "role": "user",
-            "content": AI_CONTENT_MESSAGE_CREATED_ISSUES_BY_TYPES
+            "content": AI_CONTENT_MESSAGE
         },
         {
             "role": "user",
