@@ -38,7 +38,7 @@ AI_CONTENT_MESSAGE = """
 AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Specialist at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the data about the recent ReSharper releases to make a conclusions about quality."
 
 
-def ask_ai_issues_by_types(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
+def ask_ai_created_by_team_vs_fixed_issues_by_type(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
     #global client
     client = OpenAI()
     # Assemble the prompt manually
@@ -57,6 +57,129 @@ def ask_ai_issues_by_types(created: Dict[str, Dict[str, int]], fixed: Dict[str, 
                                       for release, issues in created.items()])
                        + "\n\n"
                        + f"Amount of issues (found by ReSharper's QAs) which were fixed by developers in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in fixed.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_created_by_not_team_vs_fixed_issues_by_type(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues found by users of each type in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in created.items()])
+                       + "\n\n"
+                       + f"Amount of issues which were fixed by developers in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in fixed.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_created_by_team_vs_fixed_issues_by_priority(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues found by ReSharper's QAs of each priority in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in created.items()])
+                       + "\n\n"
+                       + f"Amount of issues (found by ReSharper's QAs) which were fixed by developers in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in fixed.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_created_by_not_team_vs_fixed_issues_by_priority(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues found by users of each priority in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in created.items()])
+                       + "\n\n"
+                       + f"Amount of issues which were fixed by developers in each release:\n\n"
                        + "\n\n".join([f"**{release}:**\n```{issues}```"
                                       for release, issues in fixed.items()])
         },

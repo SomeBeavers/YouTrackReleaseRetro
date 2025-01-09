@@ -100,13 +100,23 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     append_markdown("## Issues Created By jetbrains-team vs Fixed")
     append_markdown("How many issues were created by jetbrains-team are fixed? Should we adjust testing?")
 
+    # TODO: add new release here (copy previous + update)
+    # 243
+    cycle_dates_query_243 = f"created: {dates243}"
+    additional_query = "created by: jetbrains-team and created by: -dotnet-support"
+    query_243 = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query})"
+
+    append_markdown("> Query : " + query_243)
+
+    handler = GetIssues(client, query_243)
+    issues_by_priority_243 = handler.get_issues_count_by_priority()
+    issues_by_type_243 = handler.get_issues_count_by_type()
+
+    #region Old releases
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
     additional_query = "created by: jetbrains-team and created by: -dotnet-support"
     query_242 = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query})"
-
-    append_markdown("> Query " + release_242 +": " + query_242)
-
 
     handler = GetIssues(client, query_242)
     issues_by_priority_242 = handler.get_issues_count_by_priority()
@@ -135,12 +145,15 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     handler = GetIssues(client, query_232)
     issues_by_priority_232 = handler.get_issues_count_by_priority()
     issues_by_type_232 = handler.get_issues_count_by_type()
+    #endregion
 
-    created_by_jetbrains_team = {
-        f"Release 232 ({cycle_dates_query_232})": issues_by_priority_232,
-        f"Release 233 ({cycle_dates_query_233})": issues_by_priority_233,
-        f"Release 241 ({cycle_dates_query_241})": issues_by_priority_241,
-        f"Release 242 ({cycle_dates_query_242})": issues_by_priority_242,
+    created_by_jetbrains_team_by_priority = {
+        f"Release 232": issues_by_priority_232,
+        f"Release 233": issues_by_priority_233,
+        f"Release 241": issues_by_priority_241,
+        f"Release 242": issues_by_priority_242,
+        f"Release 243": issues_by_priority_243,
+        # TODO: add new release here
     }
 
     created_by_jetbrains_team_by_type = {
@@ -148,16 +161,27 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
         f"Release 233": issues_by_type_233,
         f"Release 241": issues_by_type_241,
         f"Release 242": issues_by_type_242,
+        f"Release 243": issues_by_type_243,
+        # TODO: add new release here
     }
 
     # Get fixed tickets created by jetbrains-team
 
+    # TODO: add new release here (copy previous + update)
+    # 243
+    additional_query_fixed = "created by: jetbrains-team and created by: -dotnet-support and (state: fixed or state: Verified)"
+    query_243_fixed = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query_fixed})"
+
+    append_markdown("> Query : " + query_243_fixed)
+
+    handler = GetIssues(client, query_243_fixed)
+    fixed_issues_by_priority_243 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_243 = handler.get_issues_count_by_type()
+
+    #region Old releases
     # 242
     additional_query_fixed = "created by: jetbrains-team and created by: -dotnet-support and (state: fixed or state: Verified)"
     query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
-
-    append_markdown("> Query " + release_242 +": " + query_242_fixed)
-
 
     handler = GetIssues(client, query_242_fixed)
     fixed_issues_by_priority_242 = handler.get_issues_count_by_priority()
@@ -183,12 +207,15 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     handler = GetIssues(client, query_232_fixed)
     fixed_issues_by_priority_232 = handler.get_issues_count_by_priority()
     fixed_issues_by_type_232 = handler.get_issues_count_by_type()
+    #endregion
 
-    fixed_by_jetbrains_team = {
-        f"Release 232 ({cycle_dates_query_232})": fixed_issues_by_priority_232,
-        f"Release 233 ({cycle_dates_query_233})": fixed_issues_by_priority_233,
-        f"Release 241 ({cycle_dates_query_241})": fixed_issues_by_priority_241,
-        f"Release 242 ({cycle_dates_query_242})": fixed_issues_by_priority_242,
+    fixed_by_jetbrains_team_by_priority = {
+        f"Release 232": fixed_issues_by_priority_232,
+        f"Release 233": fixed_issues_by_priority_233,
+        f"Release 241": fixed_issues_by_priority_241,
+        f"Release 242": fixed_issues_by_priority_242,
+        f"Release 243": fixed_issues_by_priority_243,
+        # TODO: add new release here
     }
 
     fixed_by_jetbrains_team_by_type = {
@@ -196,33 +223,51 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
         f"Release 233": fixed_issues_by_type_233,
         f"Release 241": fixed_issues_by_type_241,
         f"Release 242": fixed_issues_by_type_242,
+        f"Release 243": fixed_issues_by_type_243,
+        # TODO: add new release here
     }
 
-    plot1 = plot_created_vs_fixed_by_category(plotter.PRIORITIES, created_by_jetbrains_team, fixed_by_jetbrains_team,
+    plot1 = plot_created_vs_fixed_by_category(plotter.PRIORITIES, created_by_jetbrains_team_by_priority, fixed_by_jetbrains_team_by_priority,
                                               "Distribution of issues by priorities (created by jetbrains-team vs fixed)")
     append_markdown("![Issues created by jetbrains-team by priority](images/" + os.path.basename(plot1) + ")")
+
+    # Send data to AI
+    append_markdown("### AI analysis")
+    ai_response = ask_ai_created_by_team_vs_fixed_issues_by_priority(created_by_jetbrains_team_by_priority, fixed_by_jetbrains_team_by_priority)
+    append_markdown(f"\n{ai_response}\n")
 
     plot2 = plot_created_vs_fixed_by_category(plotter.TYPES, created_by_jetbrains_team_by_type,
                                               fixed_by_jetbrains_team_by_type,
                                               "Distribution of issues by types (created by jetbrains-team vs fixed)")
     append_markdown("![Issues created by jetbrains-team by types](images/" + os.path.basename(plot2) + ")")
 
-    # # Send data to AI
-    # append_markdown("## AI analysis for issues created by jetbrains-team")
-    # ai_response = ask_ai_issues_by_types(created_by_jetbrains_team, fixed_by_jetbrains_team)
-    # append_markdown(f"\n{ai_response}\n")
+    # Send data to AI
+    append_markdown("### AI analysis")
+    ai_response = ask_ai_created_by_team_vs_fixed_issues_by_type(created_by_jetbrains_team_by_type, fixed_by_jetbrains_team_by_type)
+    append_markdown(f"\n{ai_response}\n")
 
 def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     # Get tickets created by users
     append_markdown("## Issues Created By Users vs Fixed")
     append_markdown("How many users' issues are fixed?")
 
+    # TODO: add new release here (copy previous + update)
+    # 243
+    cycle_dates_query_243 = f"created: {dates243}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query_243 = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query})"
+
+    append_markdown("> Query : " + query_243)
+
+    handler = GetIssues(client, query_243)
+    issues_by_priority_243 = handler.get_issues_count_by_priority()
+    issues_by_type_243 = handler.get_issues_count_by_type()
+
+    #region Old releases
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query_242 = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query})"
-
-    append_markdown("> Query " + release_242 +": " + query_242)
 
     handler = GetIssues(client, query_242)
     issues_by_priority_242 = handler.get_issues_count_by_priority()
@@ -251,12 +296,15 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     handler = GetIssues(client, query_232)
     issues_by_priority_232 = handler.get_issues_count_by_priority()
     issues_by_type_232 = handler.get_issues_count_by_type()
+    #endregion
 
     created_issues_by_priority = {
-        f"Release 232 ({cycle_dates_query_232})": issues_by_priority_232,
-        f"Release 233 ({cycle_dates_query_233})": issues_by_priority_233,
-        f"Release 241 ({cycle_dates_query_241})": issues_by_priority_241,
-        f"Release 242 ({cycle_dates_query_242})": issues_by_priority_242,
+        f"Release 232": issues_by_priority_232,
+        f"Release 233": issues_by_priority_233,
+        f"Release 241": issues_by_priority_241,
+        f"Release 242": issues_by_priority_242,
+        f"Release 243": issues_by_priority_243,
+        # TODO: add new release here
     }
 
     created_issues_by_type = {
@@ -264,15 +312,27 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 233": issues_by_type_233,
         f"Release 241": issues_by_type_241,
         f"Release 242": issues_by_type_242,
+        f"Release 243": issues_by_type_243,
+        # TODO: add new release here
     }
 
     # Get fixed tickets created by users
 
+    # TODO: add new release here (copy previous + update)
+    # 243
+    additional_query_fixed = "(created by: -jetbrains-team or created by: dotnet-support) and (state: fixed or state: Verified)"
+    query_243_fixed = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query_fixed})"
+
+    append_markdown("> Query : " + query_243_fixed)
+
+    handler = GetIssues(client, query_243_fixed)
+    fixed_issues_by_priority_243 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_243 = handler.get_issues_count_by_type()
+
+    #region Old releases
     # 242
     additional_query_fixed = "(created by: -jetbrains-team or created by: dotnet-support) and (state: fixed or state: Verified)"
     query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
-
-    append_markdown("> Query " + release_242 + ": " + query_242_fixed)
 
     handler = GetIssues(client, query_242_fixed)
     fixed_issues_by_priority_242 = handler.get_issues_count_by_priority()
@@ -298,12 +358,15 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     handler = GetIssues(client, query_232_fixed)
     fixed_issues_by_priority_232 = handler.get_issues_count_by_priority()
     fixed_issues_by_type_232 = handler.get_issues_count_by_type()
+    #endregion
 
     fixed_issues_by_priority = {
-        f"Release 232 ({cycle_dates_query_232})": fixed_issues_by_priority_232,
-        f"Release 233 ({cycle_dates_query_233})": fixed_issues_by_priority_233,
-        f"Release 241 ({cycle_dates_query_241})": fixed_issues_by_priority_241,
-        f"Release 242 ({cycle_dates_query_242})": fixed_issues_by_priority_242,
+        f"Release 232": fixed_issues_by_priority_232,
+        f"Release 233": fixed_issues_by_priority_233,
+        f"Release 241": fixed_issues_by_priority_241,
+        f"Release 242": fixed_issues_by_priority_242,
+        f"Release 243": fixed_issues_by_priority_243,
+        # TODO: add new release here
     }
 
     fixed_issues_by_type = {
@@ -311,21 +374,28 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 233": fixed_issues_by_type_233,
         f"Release 241": fixed_issues_by_type_241,
         f"Release 242": fixed_issues_by_type_242,
+        f"Release 243": fixed_issues_by_type_243,
+        # TODO: add new release here
     }
 
     plot1 = plot_created_vs_fixed_by_category(plotter.PRIORITIES, created_issues_by_priority, fixed_issues_by_priority,
                                               "Distribution of issues by priorities (created by users vs fixed)")
     append_markdown("![Issues created by users by priority](images/" + os.path.basename(plot1) + ")")
 
+    # Send data to AI
+    append_markdown("### AI analysis")
+    ai_response = ask_ai_created_by_not_team_vs_fixed_issues_by_priority(created_issues_by_priority, fixed_issues_by_priority)
+    append_markdown(f"\n{ai_response}\n")
+
     plot2 = plot_created_vs_fixed_by_category(plotter.TYPES, created_issues_by_type,
                                               fixed_issues_by_type,
                                               "Distribution of issues by types (created by users vs fixed)")
     append_markdown("![Issues created by users by types](images/" + os.path.basename(plot2) + ")")
 
-    # # Send data to AI
-    # append_markdown("## AI analysis for issues created by jetbrains-team")
-    # ai_response = ask_ai_issues_by_types(created_by_jetbrains_team, fixed_by_jetbrains_team)
-    # append_markdown(f"\n{ai_response}\n")
+    # Send data to AI
+    append_markdown("### AI analysis")
+    ai_response = ask_ai_created_by_not_team_vs_fixed_issues_by_type(created_issues_by_type, fixed_issues_by_type)
+    append_markdown(f"\n{ai_response}\n")
 
 def get_issues_created_by_users_2_weeks_after_release():
     # Bugs created by users 2 weeks after release
@@ -812,11 +882,10 @@ def split_dict(input_dict, n):
 
 # 1. Update dates
 # 2. Run
-# 3. Uncomment AI processing TODO: check that AI queries are correct!!!
 
 # get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team) #TODO: checked
-get_issues_created_by_jetbrains_team_vs_fixed()
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
+# get_issues_created_by_jetbrains_team_vs_fixed() #TODO: checked
+get_issues_created_by_NOT_jetbrains_team_vs_fixed()
 # get_issues_created_by_users_2_weeks_after_release()
 # get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
 #
