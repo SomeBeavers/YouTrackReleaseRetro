@@ -27,12 +27,45 @@ AI_CONTENT_MESSAGE = """
     Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
 
     1. Identify Significant Trends or Changes: Highlight any notable trends, increases, or decreases in issues between releases.
-
     2. Highlight Areas of Concern or Improvement: Identify any areas that have shown significant changes or may indicate potential areas for improvement.
-
     3. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
-    
     4. Provide conclusions about the quality of the latest release.
+    """
+
+AI_CONTENT_MESSAGE_ISSUES_DESCRIPTION = """
+    Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to look at the issues created by users 2 weeks after the release. The info contains the State of the issues which is our main point of interest. 
+    If the issues has 'Fixed' or 'Verified' state then it means that reported problem was successfully fixed. 
+    Please analyze what issues were fixed and what were not. 
+    """
+
+AI_CONTENT_MESSAGE_ISSUES_FIXED_IN_BUGFIX = """
+    Hello! I need your expertise to analyze the quality of ReSharper's latest release. Specifically, I would like you to:
+
+    1. Identify Common Themes or Patterns: Highlight any notable themes, patterns in fixed issues.
+    2. Should some issues be fixed in earlier bugfixes or not fixed at all?
+    3. Highlight Areas of Concern or Improvement: Identify any areas that may indicate potential areas for improvement.
+    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    5. Provide conclusions about the quality of the latest release.
+    
+    """
+
+AI_CONTENT_MESSAGE_ISSUES_CREATED = """
+    Hello! I need your expertise to analyze reported issues in ReSharper. Specifically, I would like you to:
+
+    1. Identify Common Themes or Patterns: Highlight any notable themes, patterns in issues. What issues were reported and not fixed? What issues were fixed? Is there any clusters of similar issues?
+    2. Provide comprehensive root-cause analysis of all identified patterns.
+    3. Highlight Areas of Concern or Improvement: Identify any areas that may indicate potential areas for improvement.
+    4. Provide Actionable Recommendations: Based on your analysis, offer practical recommendations to address any identified issues or trends.
+    5. Provide conclusions about the quality.
+    
+    """
+
+AI_CONTENT_MESSAGE_ISSUES_CREATED_BY_DATE = """
+    Hello! I need your expertise to analyze reported issues in ReSharper. Specifically, I would like you to:
+
+    1. Identify Common Themes or Patterns: Highlight any notable themes, patterns in issues. 
+    2. Provide comprehensive root-cause analysis of all identified patterns.
+    3. Highlight Areas of Concern or Improvement: Identify any areas that may indicate potential areas for improvement.
     """
 
 AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Specialist at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the data about the recent ReSharper releases to make a conclusions about quality."
@@ -57,6 +90,47 @@ def ask_ai_created_by_team_vs_fixed_issues_by_type(created: Dict[str, Dict[str, 
                                       for release, issues in created.items()])
                        + "\n\n"
                        + f"Amount of issues (found by ReSharper's QAs) which were fixed by developers in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in fixed.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_planned_vs_fixed_issues_by_type(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues planned for each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in created.items()])
+                       + "\n\n"
+                       + f"Amount of issues actually done in each release:\n\n"
                        + "\n\n".join([f"**{release}:**\n```{issues}```"
                                       for release, issues in fixed.items()])
         },
@@ -139,6 +213,47 @@ def ask_ai_created_by_team_vs_fixed_issues_by_priority(created: Dict[str, Dict[s
                                       for release, issues in created.items()])
                        + "\n\n"
                        + f"Amount of issues (found by ReSharper's QAs) which were fixed by developers in each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in fixed.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_planned_vs_fixed_issues_by_priority(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE
+        },
+        {
+            "role": "user",
+            "content": f"Amount of issues planned for each release:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in created.items()])
+                       + "\n\n"
+                       + f"Amount of issues actually done in each release:\n\n"
                        + "\n\n".join([f"**{release}:**\n```{issues}```"
                                       for release, issues in fixed.items()])
         },
@@ -297,6 +412,136 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
         {
             "role": "user",
             "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_issues_created_by_users_by_creation_date(data: Dict[str, Dict[str, int]]) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE_ISSUES_CREATED_BY_DATE
+        },
+        {
+            "role": "user",
+            "content": f"Here is the data for the analysis. It shows when issues were created:\n\n"
+                       + "\n\n".join([f"**{release}:**\n```{issues}```"
+                                      for release, issues in data.items()])
+        },
+        {
+            "role": "user",
+            "content": AI_STEPS_MESSAGE
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release(table: str) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE_ISSUES_DESCRIPTION
+        },
+        {
+            "role": "user",
+            "content": f"Here is the data for the analysis. It shows info about the issues created by users 2 weeks after the release: \n\n" + table
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_issues_fixed_in_bugfix(table: str) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE_ISSUES_FIXED_IN_BUGFIX
+        },
+        {
+            "role": "user",
+            "content": f"Here is the data for the analysis. It shows info about the issues fixed in bugfixes: \n\n" + table
+        }
+    ]
+    for message in ai_messages:
+        prompt += f"{message['role'].capitalize()}: {message['content'].strip()}\n\n"
+    # Print the assembled prompt
+    print(prompt)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=ai_messages
+    )
+    ai_response = completion.choices[0].message.content
+    print(ai_response)
+
+    return ai_response
+
+def ask_ai_created_issues(table: str) -> str:
+    #global client
+    client = OpenAI()
+    # Assemble the prompt manually
+    prompt = ""
+    ai_messages = [
+        {"role": "system",
+         "content": AI_SYSTEM_MESSAGE},
+        {
+            "role": "user",
+            "content": AI_CONTENT_MESSAGE_ISSUES_CREATED
+        },
+        {
+            "role": "user",
+            "content": f"Here is the data for the analysis. It shows info about the issues: \n\n" + table
         }
     ]
     for message in ai_messages:

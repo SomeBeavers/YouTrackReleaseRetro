@@ -12,6 +12,7 @@ def initialize_markdown():
         md_file.write(f"**Date:** {datetime.now().strftime('%Y-%m-%d')}\n\n")
         md_file.write("## Table of Contents\n")
         md_file.write("- [Issues Created During Release Cycle (including issues from jetbrains-team)](#issues-created-during-release-cycle-including-issues-from-jetbrains-team)\n")
+        md_file.write("- [Issues created during release cycle](#issues-created-during-release-cycle)\n")
         md_file.write("- [Issues Created By jetbrains-team vs Fixed](#issues-created-by-jetbrains-team-vs-fixed)\n")
         md_file.write("- [Issues Created By Users vs Fixed](#issues-created-by-users-vs-fixed)\n")
         md_file.write("- [Issues created by users 2 weeks after the release](#issues-created-by-users-2-weeks-after-the-release)\n")
@@ -28,12 +29,21 @@ def append_markdown(content: str):
     with open(MARKDOWN_FILE, 'a', encoding='utf-8') as md_file:
         md_file.write(content + "\n\n")
 
-def write_table(headers: List[str], rows: List[List[str]]):
+def write_table(headers: List[str], rows: List[List[str]]) -> str:
     table = "| " + " | ".join(headers) + " |\n"
     table += "| " + " | ".join(['---'] * len(headers)) + " |\n"
     for row in rows:
         table += "| " + " | ".join(row) + " |\n"
     append_markdown(table)
+    return table
+
+def compose_table(headers: List[str], rows: List[List[str]]) -> str:
+    table = "| " + " | ".join(headers) + " |\n"
+    table += "| " + " | ".join(['---'] * len(headers)) + " |\n"
+    for row in rows:
+        table += "| " + " | ".join(row) + " |\n"
+
+    return table
 
 def log_issues_by_type(data: Dict[str, Dict[str, int]]):
     append_markdown("## Issue Types Analysis\n")
