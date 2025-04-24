@@ -40,16 +40,23 @@ def get_all_issues_count():
 
     # TODO: add new release here (copy previous + update)
 
+    # 251
+    cycle_dates_query_251 = f"created: {dates251}"
+    query_251 = f"project:ReSharper and {cycle_dates_query_251}"
+
+    append_markdown("> Query : " + query_251)
+
+    handler = GetIssues(client, query_251)
+    issues_251 = handler.get_issues_count_by_various_parameters()
+
+    #region Old releases
     # 243
     cycle_dates_query_243 = f"created: {dates243}"
     query_243 = f"project:ReSharper and {cycle_dates_query_243}"
 
-    append_markdown("> Query : " + query_243)
-
     handler = GetIssues(client, query_243)
     issues_243 = handler.get_issues_count_by_various_parameters()
 
-    #region Old releases
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
     query_242 = f"project:ReSharper and {cycle_dates_query_242}"
@@ -70,6 +77,7 @@ def get_all_issues_count():
         f"Release 241": issues_241[youtrack.SUBSYSTEM],
         f"Release 242": issues_242[youtrack.SUBSYSTEM],
         f"Release 243": issues_243[youtrack.SUBSYSTEM],
+        f"Release 251": issues_251[youtrack.SUBSYSTEM],
         # TODO: add new release here
     }
 
@@ -77,6 +85,7 @@ def get_all_issues_count():
         f"Release 241": issues_241[youtrack.PRIORITY],
         f"Release 242": issues_242[youtrack.PRIORITY],
         f"Release 243": issues_243[youtrack.PRIORITY],
+        f"Release 251": issues_251[youtrack.PRIORITY],
         # TODO: add new release here
     }
 
@@ -102,18 +111,26 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     append_markdown("How many issues were created by jetbrains-team are fixed? Should we adjust testing?")
 
     # TODO: add new release here (copy previous + update)
+    # 251
+    cycle_dates_query_251 = f"created: {dates251}"
+    additional_query = "created by: jetbrains-team and created by: -dotnet-support"
+    query_251 = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query})"
+
+    append_markdown("> Query : " + query_251)
+
+    handler = GetIssues(client, query_251)
+    issues_by_priority_251 = handler.get_issues_count_by_priority()
+    issues_by_type_251 = handler.get_issues_count_by_type()
+
+    #region Old releases
     # 243
     cycle_dates_query_243 = f"created: {dates243}"
-    additional_query = "created by: jetbrains-team and created by: -dotnet-support"
     query_243 = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query})"
-
-    append_markdown("> Query : " + query_243)
 
     handler = GetIssues(client, query_243)
     issues_by_priority_243 = handler.get_issues_count_by_priority()
     issues_by_type_243 = handler.get_issues_count_by_type()
 
-    #region Old releases
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
     additional_query = "created by: jetbrains-team and created by: -dotnet-support"
@@ -154,6 +171,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
         f"Release 241": issues_by_priority_241,
         f"Release 242": issues_by_priority_242,
         f"Release 243": issues_by_priority_243,
+        f"Release 251": issues_by_priority_251,
         # TODO: add new release here
     }
 
@@ -163,6 +181,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
         f"Release 241": issues_by_type_241,
         f"Release 242": issues_by_type_242,
         f"Release 243": issues_by_type_243,
+        f"Release 251": issues_by_type_251,
         # TODO: add new release here
     }
 
@@ -171,15 +190,22 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     # TODO: add new release here (copy previous + update)
     # 243
     additional_query_fixed = "created by: jetbrains-team and created by: -dotnet-support and (state: fixed or state: Verified)"
-    query_243_fixed = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query_fixed})"
+    query_251_fixed = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query_fixed})"
 
-    append_markdown("> Query : " + query_243_fixed)
+    append_markdown("> Query : " + query_251_fixed)
+
+    handler = GetIssues(client, query_251_fixed)
+    fixed_issues_by_priority_251 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_251 = handler.get_issues_count_by_type()
+
+    #region Old releases
+    # 243
+    query_243_fixed = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query_fixed})"
 
     handler = GetIssues(client, query_243_fixed)
     fixed_issues_by_priority_243 = handler.get_issues_count_by_priority()
     fixed_issues_by_type_243 = handler.get_issues_count_by_type()
 
-    #region Old releases
     # 242
     additional_query_fixed = "created by: jetbrains-team and created by: -dotnet-support and (state: fixed or state: Verified)"
     query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
@@ -216,6 +242,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
         f"Release 241": fixed_issues_by_priority_241,
         f"Release 242": fixed_issues_by_priority_242,
         f"Release 243": fixed_issues_by_priority_243,
+        f"Release 251": fixed_issues_by_priority_251,
         # TODO: add new release here
     }
 
@@ -225,6 +252,7 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
         f"Release 241": fixed_issues_by_type_241,
         f"Release 242": fixed_issues_by_type_242,
         f"Release 243": fixed_issues_by_type_243,
+        f"Release 251": fixed_issues_by_type_251,
         # TODO: add new release here
     }
 
@@ -253,18 +281,26 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     append_markdown("How many users' issues are fixed?")
 
     # TODO: add new release here (copy previous + update)
+    # 251
+    cycle_dates_query_251 = f"created: {dates251}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query_251 = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query})"
+
+    append_markdown("> Query : " + query_251)
+
+    handler = GetIssues(client, query_251)
+    issues_by_priority_251 = handler.get_issues_count_by_priority()
+    issues_by_type_251 = handler.get_issues_count_by_type()
+
+    #region Old releases
     # 243
     cycle_dates_query_243 = f"created: {dates243}"
-    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query_243 = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query})"
-
-    append_markdown("> Query : " + query_243)
 
     handler = GetIssues(client, query_243)
     issues_by_priority_243 = handler.get_issues_count_by_priority()
     issues_by_type_243 = handler.get_issues_count_by_type()
 
-    #region Old releases
     # 242
     cycle_dates_query_242 = f"created: {dates242}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
@@ -305,6 +341,7 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 241": issues_by_priority_241,
         f"Release 242": issues_by_priority_242,
         f"Release 243": issues_by_priority_243,
+        f"Release 251": issues_by_priority_251,
         # TODO: add new release here
     }
 
@@ -314,23 +351,31 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 241": issues_by_type_241,
         f"Release 242": issues_by_type_242,
         f"Release 243": issues_by_type_243,
+        f"Release 251": issues_by_type_251,
         # TODO: add new release here
     }
 
     # Get fixed tickets created by users
 
     # TODO: add new release here (copy previous + update)
-    # 243
+    # 251
     additional_query_fixed = "(created by: -jetbrains-team or created by: dotnet-support) and (state: fixed or state: Verified)"
-    query_243_fixed = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query_fixed})"
+    query_251_fixed = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query_fixed})"
 
-    append_markdown("> Query : " + query_243_fixed)
+    append_markdown("> Query : " + query_251_fixed)
+
+    handler = GetIssues(client, query_251_fixed)
+    fixed_issues_by_priority_251 = handler.get_issues_count_by_priority()
+    fixed_issues_by_type_251 = handler.get_issues_count_by_type()
+
+    #region Old releases
+    # 243
+    query_243_fixed = f"project:ReSharper and {cycle_dates_query_243} and ({additional_query_fixed})"
 
     handler = GetIssues(client, query_243_fixed)
     fixed_issues_by_priority_243 = handler.get_issues_count_by_priority()
     fixed_issues_by_type_243 = handler.get_issues_count_by_type()
 
-    #region Old releases
     # 242
     additional_query_fixed = "(created by: -jetbrains-team or created by: dotnet-support) and (state: fixed or state: Verified)"
     query_242_fixed = f"project:ReSharper and {cycle_dates_query_242} and ({additional_query_fixed})"
@@ -367,6 +412,7 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 241": fixed_issues_by_priority_241,
         f"Release 242": fixed_issues_by_priority_242,
         f"Release 243": fixed_issues_by_priority_243,
+        f"Release 251": fixed_issues_by_priority_251,
         # TODO: add new release here
     }
 
@@ -376,6 +422,7 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
         f"Release 241": fixed_issues_by_type_241,
         f"Release 242": fixed_issues_by_type_242,
         f"Release 243": fixed_issues_by_type_243,
+        f"Release 251": fixed_issues_by_type_251,
         # TODO: add new release here
     }
 
@@ -404,17 +451,24 @@ def get_issues_created_by_users_2_weeks_after_release():
     append_markdown("Is release Ok?")
 
     # TODO: add new release here (copy previous + update)
+    # 251
+    dates251_2weeks_query = f"created: {dates251_2weeks}"
+    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
+    query_251 = f"project:ReSharper and {dates251_2weeks_query} and ({additional_query})"
+
+    append_markdown("> Query : " + query_251)
+
+    issues_handler = GetIssues(client, query_251)
+    issues_by_priority_251 = issues_handler.get_bugs_count_by_priority()
+
+    #region Old releases
     # 243
     dates243_2weeks_query = f"created: {dates243_2weeks}"
-    additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query_243 = f"project:ReSharper and {dates243_2weeks_query} and ({additional_query})"
-
-    append_markdown("> Query : " + query_243)
 
     issues_handler = GetIssues(client, query_243)
     issues_by_priority_243 = issues_handler.get_bugs_count_by_priority()
 
-    #region Old releases
     # 242
     dates242_2weeks_query = f"created: {dates242_2weeks}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
@@ -452,6 +506,7 @@ def get_issues_created_by_users_2_weeks_after_release():
         f"Release 241": issues_by_priority_241,
         f"Release 242": issues_by_priority_242,
         f"Release 243": issues_by_priority_243,
+        f"Release 251": issues_by_priority_251,
         # TODO: add new release here
     }
 
@@ -510,7 +565,7 @@ def get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release(
     append_markdown(f"\n{ai_response}\n")
 
 def get_bugs_created_by_users_between_bugfixes():
-    append_markdown("## Bugs created by users in 242 release between bugfixes")
+    append_markdown("## Bugs created by users between bugfixes")
     append_markdown("How many bugs are there after the bugfix? Are we adding more bugs then we are fixing?")
 
     issues_by_priority_1 = None
@@ -624,7 +679,7 @@ def get_issues_fixed_in_bugfix():
     issues_handler = GetIssues(client, query)
     issues_fixed_in_bugfix = issues_handler.get_issues()
 
-    # Sort the issues first by "Available in" (filtered for 2024.2.*), then by "Subsystem", and lastly by "Priority"
+    # Sort the issues first by "Available in", then by "Subsystem", and lastly by "Priority"
     sorted_issues = sorted(
         issues_fixed_in_bugfix,
         key=lambda issue: (
@@ -891,17 +946,24 @@ def get_regressions_found_during_release_cycle():
     append_markdown("How many regressions were found during release cycle?")
 
     # TODO: add new release here (copy previous + update)
+    # 251
+    dates_251_query = f"created: {dates251}"
+    additional_query = "tag: {.net-regression}"
+    query_251 = f"project:ReSharper and {dates_251_query} and ({additional_query})"
+
+    append_markdown("> Query : " + query_251)
+
+    issues_handler = GetIssues(client, query_251)
+    issues_251 = issues_handler.get_issues()
+
+    #region Old releases
     # 243
     dates_243_query = f"created: {dates243}"
-    additional_query = "tag: {.net-regression}"
     query_243 = f"project:ReSharper and {dates_243_query} and ({additional_query})"
-
-    append_markdown("> Query : " + query_243)
 
     issues_handler = GetIssues(client, query_243)
     issues_243 = issues_handler.get_issues()
 
-    #region Old releases
     # 242
     dates_242_query = f"created: {dates242}"
     query_242 = f"project:ReSharper and {dates_242_query} and ({additional_query})"
@@ -914,6 +976,7 @@ def get_regressions_found_during_release_cycle():
     issue_counts: dict[str, int] = {
         "242": len(issues_242),
         "243": len(issues_243),
+        "251": len(issues_251),
         # TODO: add new release here
     }
 
@@ -930,7 +993,7 @@ def get_untriaged_time():
 
     # 251
     dates_251_query = f"created: {dates251}"
-    additional_query = "tag: -{moved from Rider} and type: -exception and QA_assigned: -{No qa assigned}"
+    additional_query = "tag: -{moved from Rider} and type: -exception"
     query_251 = f"project:ReSharper and {dates_251_query} and ({additional_query})"
 
     append_markdown("> Query " + ": " + query_251)
@@ -1010,21 +1073,21 @@ def split_dict(input_dict, n):
 # 1. Update dates
 # 2. Run
 
-# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
-# get_list_of_created_issues()
-# get_issues_created_by_jetbrains_team_vs_fixed()
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
-# get_issues_created_by_users_2_weeks_after_release()
-# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
+get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
+get_list_of_created_issues()
+get_issues_created_by_jetbrains_team_vs_fixed()
+get_issues_created_by_NOT_jetbrains_team_vs_fixed()
+get_issues_created_by_users_2_weeks_after_release()
+get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
 # get_bugs_created_by_users_between_bugfixes()
 # get_issues_fixed_in_bugfix()
-# get_users_issues_by_dates()
-# get_planned_vs_actually_done()
-# get_users_comments()
+get_users_issues_by_dates()
+get_planned_vs_actually_done()
+get_users_comments()
 
 # Without AI
-# get_regressions_found_during_release_cycle()
-# get_untriaged_time()
+get_regressions_found_during_release_cycle()
+get_untriaged_time()
 
 print(f"Report is generated.")
 

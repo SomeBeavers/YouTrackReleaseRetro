@@ -1,13 +1,21 @@
 ﻿from datetime import datetime
 
+release_252 = "252"
+dates252 = "2025-04-17 .. 2025-07-17"
+START_DATE_252 = datetime(2024, 4, 17)
+END_DATE_252 = datetime(2025, 7, 17)
+dates_252_available_in = "2025.2.*"
+planned_252 = "resharper-stat/planned-2025.2"
 
 
 release_251 = "251"
-dates251 = "2024-10-28 .. 2025-04-02"
-START_DATE_251 = datetime(2024, 12, 28)
-END_DATE_251 = datetime(2025, 4, 2)
+dates251 = "2024-10-13 .. 2025-04-16"
+START_DATE_251 = datetime(2024, 10, 13)
+END_DATE_251 = datetime(2025, 4, 16)
 dates_251_available_in = "2025.1.*"
 planned_251 = "resharper-stat/planned-2025.1"
+dates251_2weeks = "2025-04-16 .. 2025-04-30"
+# dates251_1 = "2025-04-16 .. 2025-04-16"
 
 release_243 = "243"
 dates243_2weeks = "2024-10-13 .. 2024-10-27"
@@ -53,20 +61,20 @@ year_2025 = "2025-01-01 .. 2026-01-01"
 
 # TODO: update values below
 # CURRENT DATES
-current_release = release_243
-current_release_dates = dates243
-current_release_2weeks = dates243_2weeks
-current_release_available_in = dates_243_available_in
-current_release_START_DATE = START_DATE_243
-current_release_END_DATE = END_DATE_243
-current_release_planned_tag = planned_243
-REGEX_FOR_AVAILABLE_VERSION = r'2024\.3\.[^\s]*'
-current_release_bugfix_1 = dates243_1
-current_release_bugfix_2 = dates243_2
-current_release_bugfix_3 = dates243_3
-current_release_bugfix_4 = dates243_4
-current_release_bugfix_5 = dates243_5
-current_release_bugfix_6 = dates243_6
-current_release_bugfix_7 = dates243_7
-current_release_bugfix_8 = dates243_8
-current_release_bugfix_9 = dates243_9
+current_release = release_251
+current_release_dates = dates251
+current_release_2weeks = dates251_2weeks
+current_release_available_in = dates_251_available_in
+current_release_START_DATE = START_DATE_251
+current_release_END_DATE = END_DATE_251
+current_release_planned_tag = planned_251
+REGEX_FOR_AVAILABLE_VERSION = r'2025\.1\.[^\s]*'
+current_release_bugfix_1 = None
+current_release_bugfix_2 = None
+current_release_bugfix_3 = None
+current_release_bugfix_4 = None
+current_release_bugfix_5 = None
+current_release_bugfix_6 = None
+current_release_bugfix_7 = None
+current_release_bugfix_8 = None
+current_release_bugfix_9 = None
