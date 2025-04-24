@@ -715,7 +715,7 @@ def get_list_of_created_issues():
     append_markdown("What issues are created during release cycle?")
 
     cycle_dates_query = f"created: {current_release_dates}"
-    query = f"project:ReSharper and {cycle_dates_query}"
+    query = f"project:ReSharper and {cycle_dates_query} and subsystem: -QA"
 
     append_markdown("> Query : " + query)
 

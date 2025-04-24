@@ -550,7 +550,7 @@ def ask_ai_created_issues(table: str) -> str:
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1-mini",
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content

@@ -180,21 +180,9 @@ class GetIssues:
                     issue_subsystem_counts[issue.subsystem] = 1
             # Count by creation date
             if issue.created:
-                print(f"{issue.created} ---->")
                 # Convert timestamp to date
                 created_date = datetime.fromtimestamp(issue.created[0] / 1000).date().strftime('%Y-%m-%d')
-                print(f"{created_date} ---- >")
                 issue_date_counts[created_date] = issue_date_counts.get(created_date, 0) + 1
-                print(f"{issue_date_counts[created_date]}")
-
-        print("__")
-
-        for type_name, count in issue_priority_counts.items():
-            print(f"{type_name}: {count}")
-
-        print("__")
-        for type_name, count in issue_subsystem_counts.items():
-            print(f"{type_name}: {count}")
 
         return { f"{PRIORITY}": issue_priority_counts,
                  f"{SUBSYSTEM}": issue_subsystem_counts,
@@ -213,11 +201,6 @@ class GetIssues:
                 else:
                     issue_priority_counts[issue.priority] = 1
 
-        print("__")
-
-        for type_name, count in issue_priority_counts.items():
-            print(f"{type_name}: {count}")
-
         return issue_priority_counts
 
     def get_bugs_count_by_priority(self) -> Dict[str, int]:
@@ -232,11 +215,6 @@ class GetIssues:
                 else:
                     issue_priority_counts[issue.priority] = 1
 
-        print("__")
-
-        for type_name, count in issue_priority_counts.items():
-            print(f"{type_name}: {count}")
-
         return issue_priority_counts
 
     def get_issues_count_by_type(self) -> Dict[str, int]:
@@ -250,11 +228,6 @@ class GetIssues:
                     issue_type_counts[issue.type] += 1
                 else:
                     issue_type_counts[issue.type] = 1
-
-        print("__")
-
-        for type_name, count in issue_type_counts.items():
-            print(f"{type_name}: {count}")
 
         return issue_type_counts
 
