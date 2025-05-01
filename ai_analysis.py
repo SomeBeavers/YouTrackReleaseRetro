@@ -70,6 +70,7 @@ AI_CONTENT_MESSAGE_ISSUES_CREATED_BY_DATE = """
 
 AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Specialist at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the data about the recent ReSharper releases to make a conclusions about quality."
 
+AI_MODEL = "gpt-4.1-mini"
 
 def ask_ai_created_by_team_vs_fixed_issues_by_type(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
     #global client
@@ -104,7 +105,7 @@ def ask_ai_created_by_team_vs_fixed_issues_by_type(created: Dict[str, Dict[str, 
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -145,7 +146,7 @@ def ask_ai_planned_vs_fixed_issues_by_type(created: Dict[str, Dict[str, int]], f
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -186,7 +187,7 @@ def ask_ai_created_by_not_team_vs_fixed_issues_by_type(created: Dict[str, Dict[s
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -227,7 +228,7 @@ def ask_ai_created_by_team_vs_fixed_issues_by_priority(created: Dict[str, Dict[s
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -268,7 +269,7 @@ def ask_ai_planned_vs_fixed_issues_by_priority(created: Dict[str, Dict[str, int]
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -309,7 +310,7 @@ def ask_ai_created_by_not_team_vs_fixed_issues_by_priority(created: Dict[str, Di
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -346,7 +347,7 @@ def ask_ai_issues_count_by_subsystem_several_releases(issues: Dict[str, Dict[str
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -383,7 +384,7 @@ def ask_ai_issues_count_by_priority_several_releases(issues: Dict[str, Dict[str,
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -420,7 +421,7 @@ def ask_ai_issues_by_priorities_2_weeks(data: Dict[str, Dict[str, int]]) -> str:
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -457,7 +458,7 @@ def ask_ai_issues_created_by_users_by_creation_date(data: Dict[str, Dict[str, in
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -488,7 +489,7 @@ def ask_ai_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_relea
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -519,7 +520,7 @@ def ask_ai_issues_fixed_in_bugfix(table: str) -> str:
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -550,7 +551,7 @@ def ask_ai_created_issues(table: str) -> str:
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -587,7 +588,7 @@ def ask_ai_issues_between_bugfixes(data: Dict[str, Dict[str, int]]) -> str:
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -619,7 +620,7 @@ def ask_ai_about_comments(data: Dict[str,list]):
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
@@ -647,7 +648,7 @@ def ask_ai_about_comments_combine(data: list):
     print(prompt)
 
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=AI_MODEL,
         messages=ai_messages
     )
     ai_response = completion.choices[0].message.content
