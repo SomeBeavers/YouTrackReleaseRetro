@@ -30,6 +30,8 @@ class YouTrackIssue:
         self.comments = []
         self.state = None
         self.daysInUntriaged = None
+        self.daysInToReproduce = None
+        self.daysInReadyForTesting = None
 
 
 class GetIssues:
@@ -61,6 +63,18 @@ class GetIssues:
     def parse_issue_days_in_untriaged(self, custom_fields: List[dict]) -> int:
         for field in custom_fields:
             if field['name'] == 'Days in Untriaged' and field['value'] is not None:
+                return field['value']
+        return None
+
+    def parse_issue_days_in_to_reproduce(self, custom_fields: List[dict]) -> int:
+        for field in custom_fields:
+            if field['name'] == 'Days in To Reproduce' and field['value'] is not None:
+                return field['value']
+        return None
+
+    def parse_issue_days_in_ready_for_testing(self, custom_fields: List[dict]) -> int:
+        for field in custom_fields:
+            if field['name'] == 'Days in Ready for testing' and field['value'] is not None:
                 return field['value']
         return None
 
@@ -111,6 +125,8 @@ class GetIssues:
             issue.available_in = self.parse_issue_Avaiable_in(issue.custom_fields)
             issue.state = self.parse_issue_state(issue.custom_fields)
             issue.daysInUntriaged = self.parse_issue_days_in_untriaged(issue.custom_fields)
+            issue.daysInToReproduce = self.parse_issue_days_in_to_reproduce(issue.custom_fields)
+            issue.daysInReadyForTesting = self.parse_issue_days_in_ready_for_testing(issue.custom_fields)
 
         return youtrack_issues
 
