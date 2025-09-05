@@ -74,17 +74,17 @@ year_2025 = "2025-01-01 .. 2026-01-01"
 
 # TODO: update values below
 # CURRENT DATES
-current_release = release_251
-current_release_dates = dates251
-current_release_2weeks = dates251_2weeks
-current_release_available_in = dates_251_available_in
-current_release_available_in_release = dates_251_available_in_release
-current_release_START_DATE = START_DATE_251
-current_release_END_DATE = END_DATE_251
-current_release_planned_tag = planned_251
-REGEX_FOR_AVAILABLE_VERSION = r'2025\.1\.[^\s]*'
-current_release_bugfix_1 = dates251_1
-current_release_bugfix_2 = None
+current_release = release_252
+current_release_dates = dates252
+current_release_2weeks = dates252_2weeks
+current_release_available_in = dates_252_available_in
+current_release_available_in_release = dates_252_available_in_release
+current_release_START_DATE = START_DATE_252
+current_release_END_DATE = END_DATE_252
+current_release_planned_tag = planned_252
+REGEX_FOR_AVAILABLE_VERSION = r'2025\.2\.[^\s]*'
+current_release_bugfix_1 = dates252_1
+current_release_bugfix_2 = dates252_2
 current_release_bugfix_3 = None
 current_release_bugfix_4 = None
 current_release_bugfix_5 = None

@@ -40,6 +40,18 @@ def get_all_issues_count():
 
     # TODO: add new release here (copy previous + update)
 
+    # 252
+    additional_query = ""
+    additional_query = "(created by: -jetbrains-team or created by: dotnet-support)"
+    cycle_dates_query_252 = f"created: {dates252}"
+    query_252 = f"project:ReSharper and {cycle_dates_query_252} and {additional_query}"
+
+    append_markdown("> Query : " + query_252)
+
+    handler = GetIssues(client, query_252)
+    issues_251 = handler.get_issues_count_by_various_parameters()
+
+    #region Old releases
     # 251
     additional_query = ""
     additional_query = "(created by: -jetbrains-team or created by: dotnet-support)"
@@ -51,7 +63,6 @@ def get_all_issues_count():
     handler = GetIssues(client, query_251)
     issues_251 = handler.get_issues_count_by_various_parameters()
 
-    #region Old releases
     # 243
     cycle_dates_query_243 = f"created: {dates243}"
     query_243 = f"project:ReSharper and {cycle_dates_query_243} and {additional_query}"
@@ -1383,24 +1394,24 @@ def split_dict(input_dict, n):
 # 1. Update dates
 # 2. Run
 
-# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
-# get_list_of_created_issues()
-# get_issues_created_by_jetbrains_team_vs_fixed()
-# get_issues_created_by_qa_vs_fixed()
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
-# get_issues_created_by_users_2_weeks_after_release()
-# get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
-# get_bugs_created_by_users_between_bugfixes()
-# get_issues_fixed_in_bugfix()
-# get_users_issues_by_dates()
-# get_planned_vs_actually_done()
-# get_users_comments()
-#
-# # Without AI
-# get_regressions_found_during_release_cycle()
-# get_untriaged_time()
-# get_to_repro_time()
-get_ready_for_testing_time()
+get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
+get_list_of_created_issues()
+get_issues_created_by_jetbrains_team_vs_fixed()
+get_issues_created_by_qa_vs_fixed()
+get_issues_created_by_NOT_jetbrains_team_vs_fixed()
+get_issues_created_by_users_2_weeks_after_release()
+get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
+get_bugs_created_by_users_between_bugfixes()
+get_issues_fixed_in_bugfix()
+get_users_issues_by_dates()
+get_planned_vs_actually_done()
+get_users_comments()
+
+# Without AI
+get_regressions_found_during_release_cycle()
+get_untriaged_time()
+get_to_repro_time()
+# get_ready_for_testing_time()
 
 print(f"Report is generated.")
 
