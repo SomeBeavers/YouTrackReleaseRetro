@@ -70,7 +70,7 @@ AI_CONTENT_MESSAGE_ISSUES_CREATED_BY_DATE = """
 
 AI_SYSTEM_MESSAGE = "You are an expert Quality Assurance Specialist at JetBrains with extensive knowledge of ReSharper's functionality, release cycles, and quality metrics. Your task is to analyze the data about the recent ReSharper releases to make a conclusions about quality."
 
-AI_MODEL = "gpt-4.1-mini"
+AI_MODEL = "gpt-5-mini"
 
 def ask_ai_created_by_team_vs_fixed_issues_by_type(created: Dict[str, Dict[str, int]], fixed: Dict[str, Dict[str, int]]) -> str:
     #global client

@@ -1,11 +1,15 @@
 ﻿from datetime import datetime
 
 release_252 = "252"
-dates252 = "2025-04-17 .. 2025-07-17"
+dates252 = "2025-04-17 .. 2025-08-14"
 START_DATE_252 = datetime(2024, 4, 17)
-END_DATE_252 = datetime(2025, 7, 17)
+END_DATE_252 = datetime(2025, 8, 14)
 dates_252_available_in = "2025.2.*"
+dates_252_available_in_release = "2025.2"
 planned_252 = "resharper-stat/planned-2025.2"
+dates252_2weeks = "2025-08-15 .. 2025-08-29"
+dates252_1 = "2025-08-15 .. 2025-08-21"
+dates252_2 = "2025-08-22 .. 2025-09-04"
 
 
 release_251 = "251"
@@ -15,8 +19,16 @@ END_DATE_251 = datetime(2025, 4, 16)
 dates_251_available_in = "2025.1.*"
 dates_251_available_in_release = "2025.1"
 planned_251 = "resharper-stat/planned-2025.1"
-dates251_2weeks = "2025-04-16 .. 2025-04-30"
+dates251_2weeks = "2025-04-17 .. 2025-045-01"
 dates251_1 = "2025-04-16 .. 2025-04-28"
+dates251_2 = "2025-04-29 .. 2025-05-08"
+dates251_3 = "2025-05-09 .. 2025-06-12"
+dates251_4 = "2025-06-13 .. 2025-06-30"
+dates251_5 = "2025-07-01 .. 2025-08-04"
+dates251_6 = "2025-08-05 .. 2025-08-19"
+dates251_7 = "2025-08-20 .. 2025-09-03"
+dates251_8 = None
+dates251_9 = None
 
 release_243 = "243"
 dates243_2weeks = "2024-11-13 .. 2024-10-27"
@@ -27,7 +39,7 @@ dates243_4 = "2024-12-25 .. 2025-01-23"
 dates243_5 = "2025-01-24 .. 2025-02-07"
 dates243_6 = "2025-01-24 .. 2025-02-28"
 dates243_7 = "2025-02-29 .. 2025-04-03"
-dates243_8 = None
+dates243_8 = "2025-04-04 .. 2025-05-20"
 dates243_9 = None
 dates243 = "2024-08-15 .. 2024-11-12"
 START_DATE_243 = datetime(2024, 8, 15)
