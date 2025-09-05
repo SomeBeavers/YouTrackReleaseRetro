@@ -58,8 +58,6 @@ def get_all_issues_count():
     cycle_dates_query_251 = f"created: {dates251}"
     query_251 = f"project:ReSharper and {cycle_dates_query_251} and {additional_query}"
 
-    append_markdown("> Query : " + query_251)
-
     handler = GetIssues(client, query_251)
     issues_251 = handler.get_issues_count_by_various_parameters()
 
@@ -142,8 +140,6 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     cycle_dates_query_251 = f"created: {dates251}"
     additional_query = "created by: jetbrains-team and created by: -dotnet-support"
     query_251 = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query})"
-
-    append_markdown("> Query : " + query_251)
 
     handler = GetIssues(client, query_251)
     issues_by_priority_251 = handler.get_issues_count_by_priority()
@@ -228,8 +224,6 @@ def get_issues_created_by_jetbrains_team_vs_fixed():
     #region Old releases
     # 251
     query_251_fixed = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query_fixed})"
-
-    append_markdown("> Query : " + query_251_fixed)
 
     handler = GetIssues(client, query_251_fixed)
     fixed_issues_by_priority_251 = handler.get_issues_count_by_priority()
@@ -335,8 +329,6 @@ def get_issues_created_by_qa_vs_fixed():
     additional_query = "created by: resharper-qa"
     query_251 = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query})"
 
-    append_markdown("> Query : " + query_251)
-
     handler = GetIssues(client, query_251)
     issues_by_priority_251 = handler.get_issues_count_by_priority()
     issues_by_type_251 = handler.get_issues_count_by_type()
@@ -419,8 +411,6 @@ def get_issues_created_by_qa_vs_fixed():
     #region Old releases
     # 251
     query_251_fixed = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query_fixed})"
-
-    append_markdown("> Query : " + query_251_fixed)
 
     handler = GetIssues(client, query_251_fixed)
     fixed_issues_by_priority_251 = handler.get_issues_count_by_priority()
@@ -528,8 +518,6 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     # and state: -duplicate and state: -{{To Reproduce}} and state: -{{Third Party Problem}} and state: -Incomplete
     query_251 = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query}) "
 
-    append_markdown("> Query : " + query_251)
-
     handler = GetIssues(client, query_251)
     issues_by_priority_251 = handler.get_issues_count_by_priority()
     issues_by_type_251 = handler.get_issues_count_by_type()
@@ -614,8 +602,6 @@ def get_issues_created_by_NOT_jetbrains_team_vs_fixed():
     #region Old releases
     # 251
     query_251_fixed = f"project:ReSharper and {cycle_dates_query_251} and ({additional_query_fixed})"
-
-    append_markdown("> Query : " + query_251_fixed)
 
     handler = GetIssues(client, query_251_fixed)
     fixed_issues_by_priority_251 = handler.get_issues_count_by_priority()
@@ -719,8 +705,6 @@ def get_issues_created_by_users_2_weeks_after_release():
     dates251_2weeks_query = f"created: {dates251_2weeks}"
     additional_query = "created by: -jetbrains-team or created by: dotnet-support"
     query_251 = f"project:ReSharper and {dates251_2weeks_query} and ({additional_query})"
-
-    append_markdown("> Query : " + query_251)
 
     issues_handler = GetIssues(client, query_251)
     issues_by_priority_251 = issues_handler.get_bugs_count_by_priority()
@@ -1102,8 +1086,6 @@ def get_planned_vs_actually_done():
     additional_query = f"tag: {planned_251} and state: -duplicate and state: -{{To Reproduce}} and state: -{{Third Party Problem}} and state: -Incomplete "
     query_251 = f"project:ReSharper and ({additional_query})"
 
-    append_markdown("> Query : " + query_251)
-
     handler = GetIssues(client, query_251)
     issues_by_priority_251 = handler.get_issues_count_by_priority()
     issues_by_type_251 = handler.get_issues_count_by_type()
@@ -1249,8 +1231,6 @@ def get_regressions_found_during_release_cycle():
     dates_251_query = f"created: {dates251}"
     additional_query = "tag: {.net-regression}"
     query_251 = f"project:ReSharper and {dates_251_query} and ({additional_query})"
-
-    append_markdown("> Query : " + query_251)
 
     issues_handler = GetIssues(client, query_251)
     issues_251 = issues_handler.get_issues()
@@ -1486,11 +1466,11 @@ def split_dict(input_dict, n):
 # 1. Update dates
 # 2. Run
 
-get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
-get_list_of_created_issues()
-get_issues_created_by_jetbrains_team_vs_fixed()
-get_issues_created_by_qa_vs_fixed()
-get_issues_created_by_NOT_jetbrains_team_vs_fixed()
+# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
+# get_list_of_created_issues()
+# get_issues_created_by_jetbrains_team_vs_fixed()
+# get_issues_created_by_qa_vs_fixed()
+# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
 get_issues_created_by_users_2_weeks_after_release()
 get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
 get_bugs_created_by_users_between_bugfixes()
