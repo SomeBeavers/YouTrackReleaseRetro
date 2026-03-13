@@ -1466,11 +1466,11 @@ def split_dict(input_dict, n):
 # 1. Update dates
 # 2. Run
 
-# get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
-# get_list_of_created_issues()
-# get_issues_created_by_jetbrains_team_vs_fixed()
-# get_issues_created_by_qa_vs_fixed()
-# get_issues_created_by_NOT_jetbrains_team_vs_fixed()
+get_all_issues_count() # All issues created during release cycle (including issues from jetbrains-team)
+get_list_of_created_issues()
+get_issues_created_by_jetbrains_team_vs_fixed()
+get_issues_created_by_qa_vs_fixed()
+get_issues_created_by_NOT_jetbrains_team_vs_fixed()
 get_issues_created_by_users_2_weeks_after_release()
 get_status_of_stoppers_and_criticals_created_by_users_2_weeks_after_release()
 get_bugs_created_by_users_between_bugfixes()
