@@ -37,7 +37,7 @@ TOKEN = os.getenv("YOUTRACK_TOKEN")
 RESOLVED_DATE_RANGE = "2025-01-01 .. today"
 SEARCH_TAGS = ["dotnet-ex-release-stopper", "rider-ex-stopper"]
 MEASURE_TAGS = ["dotnet-release-stopper", "rider-release-stopper"]
-MEASURE_TAGS_FALLBACK = ["rider-ex-stopper", "dotnet-ex-release-stopper"]
+MEASURE_TAGS_FALLBACK = ["rider-ex-stopper"]
 RIDER_RELEASE_STOPPER_TAG = "rider-release-stopper"
 
 # Projects that remove the stopper tag after an issue is resolved, so the current-tag query
