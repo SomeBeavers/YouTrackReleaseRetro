@@ -48,7 +48,7 @@ SCAN_PRIORITIES = ["Show-Stopper", "Critical"]
 STOPPER_TAGS = set(SEARCH_TAGS) | set(MEASURE_TAGS)
 FIXED_STATES = {"Fixed", "Verified"}
 PLANNED_FOR_FIELD = "Planned for"
-FIX_VERSION_FIELDS = ("Fix versions", "Fixed in build")
+FIX_VERSION_FIELDS = ("Fix version", "Fixed in build")
 AVAILABLE_IN_FIELD = "Available in"
 BUILD_SUFFIX_RE = re.compile(r"\s*\([^)]*\)\s*$")
 NEXT_PUBLIC_BUILD_RE = re.compile(r"^Next\s+(\d+(?:\.\d+)*)\s+public build$", re.IGNORECASE)
@@ -229,7 +229,7 @@ def fetch_activities(issue_id: str) -> dict:
                         fallback_times.append(ts)
                         timeline.append((ts, "Tag added"))
             for item in (activity.get("removed") or []):
-                if isinstance(item, dict) and item.get("name") == RIDER_RELEASE_STOPPER_TAG:
+                if isinstance(item, dict) and item.get("name") in MEASURE_TAGS:
                     if current_state not in FIXED_STATES:
                         rider_stopper_removed_while_open = True
                     timeline.append((ts, "Tag removed"))
