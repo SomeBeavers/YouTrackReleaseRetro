@@ -39,6 +39,9 @@ SEARCH_TAGS = ["dotnet-ex-release-stopper", "rider-ex-stopper"]
 MEASURE_TAGS = ["dotnet-release-stopper", "rider-release-stopper"]
 MEASURE_TAGS_FALLBACK = ["rider-ex-stopper"]
 RIDER_RELEASE_STOPPER_TAG = "rider-release-stopper"
+# rider-ex-stopper is also applied to EAP stoppers. An issue that carried rider-eap-stopper but
+# never a real release-stopper tag (MEASURE_TAGS) is an EAP-only stopper and is excluded.
+EAP_STOPPER_TAG = "rider-eap-stopper"
 
 # Projects that remove the stopper tag after an issue is resolved, so the current-tag query
 # (SEARCH_TAGS) misses them. Discovered instead by scanning activity history (Path B).
@@ -139,15 +142,17 @@ def value_at_cutoff(changes: list[dict], cutoff_ms: float, current_value: str | 
 
 
 def planned_in_available(planned: str | None, available_clean: list[str]) -> bool:
-    """True if any cleaned Available in entry version-prefix-matches the planned version."""
+    """True only if the planned version exactly matches a (normalized) Available in entry.
+
+    A later patch release does NOT count: Available in '2026.1.1' when Planned for '2026.1' is
+    No, because the fix slipped past the planned release into a subsequent update. EAP/RC/Next
+    public build entries already normalize to their GA version (e.g. '2026.1 EAP 5' -> '2026.1'
+    via normalize_for_lookup), so they still match a GA 'Planned for'.
+    """
     if not planned:
         return False
-    for av in available_clean:
-        if av.startswith(planned):
-            tail = av[len(planned):]
-            if tail == "" or not tail[0].isdigit():
-                return True
-    return False
+    planned_key = normalize_for_lookup(strip_build_suffix(planned))
+    return planned_key in available_clean
 
 
 def oldest_available(
@@ -199,7 +204,15 @@ def fetch_activities(issue_id: str) -> dict:
         },
     )
     response.raise_for_status()
-    activities = sorted(response.json(), key=lambda a: a.get("timestamp", 0))
+    return parse_activities(response.json())
+
+
+def parse_activities(activities: list[dict]) -> dict:
+    """Parse raw YouTrack activity items (Tags + CustomField categories) into derived fields.
+
+    Pure function (no I/O) so it can be unit-tested with mocked activity payloads.
+    """
+    activities = sorted(activities, key=lambda a: a.get("timestamp", 0))
 
     primary_times = []
     fallback_times = []
@@ -207,8 +220,9 @@ def fetch_activities(issue_id: str) -> dict:
     initial_state = None
     current_state = None
     first_fixed_dt = None
-    rider_stopper_removed_while_open = False
+    stopper_removed_states = []  # state in effect each time a release-stopper tag (MEASURE_TAGS) was removed
     stopper_tag_added = False
+    eap_stopper_added = False
     planned_for_changes = []
     fix_versions_changes = []
 
@@ -222,6 +236,8 @@ def fetch_activities(issue_id: str) -> dict:
                     name = item.get("name", "")
                     if name in STOPPER_TAGS:
                         stopper_tag_added = True
+                    if name == EAP_STOPPER_TAG:
+                        eap_stopper_added = True
                     if name in MEASURE_TAGS:
                         primary_times.append(ts)
                         timeline.append((ts, "Tag added"))
@@ -230,8 +246,7 @@ def fetch_activities(issue_id: str) -> dict:
                         timeline.append((ts, "Tag added"))
             for item in (activity.get("removed") or []):
                 if isinstance(item, dict) and item.get("name") in MEASURE_TAGS:
-                    if current_state not in FIXED_STATES:
-                        rider_stopper_removed_while_open = True
+                    stopper_removed_states.append(current_state)
                     timeline.append((ts, "Tag removed"))
 
         elif category_id == "CustomFieldCategory":
@@ -272,8 +287,10 @@ def fetch_activities(issue_id: str) -> dict:
         "tag_dt": tag_dt,
         "first_fixed_dt": first_fixed_dt,
         "state_history": state_history,
-        "rider_stopper_removed_while_open": rider_stopper_removed_while_open,
+        "stopper_removed_states": stopper_removed_states,
         "stopper_tag_added": stopper_tag_added,
+        "eap_stopper_added": eap_stopper_added,
+        "release_stopper_added": bool(primary_times),  # a real release-stopper tag (MEASURE_TAGS) was added
         "planned_for_changes": planned_for_changes,
         "fix_versions_changes": fix_versions_changes,
     }
@@ -313,11 +330,142 @@ def fetch_priority_candidates() -> list[dict]:
     return result
 
 
+def fetch_resolved_state_map() -> dict[str, set[str]]:
+    """{project shortName: set of State values whose isResolved is true}.
+
+    Used to decide whether an issue was unresolved (#unresolved) at the moment a stopper tag
+    was removed. Scoped per project because the same state name can be resolved in one project
+    and unresolved in another (e.g. 'Shelved').
+    """
+    response = client.get(
+        f"{YOUTRACK_URL}/admin/projects",
+        params={
+            "fields": "shortName,customFields(field(name),bundle(values(name,isResolved)))",
+            "$top": 1000,
+        },
+    )
+    response.raise_for_status()
+    result: dict[str, set[str]] = {}
+    for proj in response.json():
+        sn = proj.get("shortName")
+        if not sn:
+            continue
+        for cf in proj.get("customFields") or []:
+            if (cf.get("field") or {}).get("name") == "State":
+                values = (cf.get("bundle") or {}).get("values") or []
+                result[sn] = {v.get("name") for v in values if v.get("isResolved")}
+    return result
+
+
 def fetch_all_activities(issue_ids: list[str]) -> dict[str, dict]:
     """Fetch activities for many issues concurrently. Returns {issue_id: activity_dict}."""
     with ThreadPoolExecutor(max_workers=16) as executor:
         results = executor.map(lambda iid: (iid, fetch_activities(iid)), issue_ids)
         return dict(results)
+
+
+def compute_row(
+    issue: dict,
+    act: dict,
+    site_releases_map: dict,
+    resolved_state_map: dict[str, set[str]],
+    default_resolved_states: set[str],
+    is_tagged: bool,
+) -> dict | None:
+    """Turn one issue + its parsed activities into a report row, or None if it doesn't qualify.
+
+    Pure function (no I/O). `act` is the dict returned by parse_activities; `issue` carries
+    idReadable, summary, created, resolved and a "_cf" map of custom-field values.
+    `is_tagged` is True for Path A issues (currently carry a stopper tag) which always qualify.
+    """
+    issue_id = issue["idReadable"]
+    created_ms = issue.get("created")
+    resolved_ms = issue.get("resolved")
+    if not created_ms or not resolved_ms:
+        return None
+
+    # Exclude EAP-only stoppers: carried rider-eap-stopper but never a real release-stopper tag.
+    if act["eap_stopper_added"] and not act["release_stopper_added"]:
+        return None
+
+    # Path B candidates qualify only if a stopper tag was added in history; Path A always qualifies.
+    if not is_tagged and not act["stopper_tag_added"]:
+        return None
+
+    created_dt = ms_to_dt(created_ms)
+    resolved_dt = ms_to_dt(resolved_ms)
+
+    # Stopper tag removed while the issue was in an unresolved (#unresolved) state.
+    resolved_states = resolved_state_map.get(issue_id.split("-")[0], default_resolved_states)
+    removed_while_open = any(s not in resolved_states for s in act["stopper_removed_states"])
+
+    tag_dt = act["tag_dt"]
+    assumed = tag_dt is None
+    if assumed:
+        tag_dt = created_dt
+
+    days_to_tag = (tag_dt - created_dt).total_seconds() / 86400
+    days_tag_to_resolved = (resolved_dt - tag_dt).total_seconds() / 86400
+    days_tag_to_first_fixed = (
+        (act["first_fixed_dt"] - tag_dt).total_seconds() / 86400
+        if act["first_fixed_dt"] is not None else None
+    )
+
+    # End-of-day cutoff (UTC) on the tag-added date — captures values "set within the day".
+    eod = tag_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+    cutoff_ms = eod.timestamp() * 1000
+
+    cfs = issue.get("_cf", {})
+    current_planned = cf_to_str(cfs.get(PLANNED_FOR_FIELD))
+    current_fix = next((cf_to_str(cfs[f]) for f in FIX_VERSION_FIELDS if cfs.get(f)), None)
+
+    planned_for = value_at_cutoff(act["planned_for_changes"], cutoff_ms, current_planned)
+    if not planned_for:
+        planned_for = value_at_cutoff(act["fix_versions_changes"], cutoff_ms, current_fix)
+
+    available_display = [strip_build_suffix(v) for v in cf_to_list(cfs.get(AVAILABLE_IN_FIELD))]
+    available_display = [v for v in available_display if v]
+    available_lookup = [normalize_for_lookup(v) for v in available_display]
+
+    in_planned = planned_in_available(planned_for, available_lookup)
+
+    oldest = oldest_available(available_lookup, site_releases_map)
+    first_avail = oldest[0] if oldest else ""
+    first_avail_date = oldest[1] if oldest else None
+
+    # Date for Planned For; fall back to First Available's date if Planned For has no site match.
+    site_date = site_releases_map.get(planned_for) if planned_for else None
+    if site_date is None:
+        site_date = first_avail_date
+    planned_for_date = site_date.isoformat() if site_date else ""
+    days_tag_to_release = (site_date - tag_dt.date()).days if site_date else None
+
+    return {
+        "id": issue_id,
+        "project": issue_id.split("-")[0],
+        "summary": issue["summary"],
+        "created": created_dt.strftime("%Y-%m-%d"),
+        "tag_added": tag_dt.strftime("%Y-%m-%d") + ("*" if assumed else ""),
+        "resolved": resolved_dt.strftime("%Y-%m-%d"),
+        "days_to_tag": days_to_tag,
+        "days_tag_to_resolved": days_tag_to_resolved,
+        "days_tag_to_first_fixed": days_tag_to_first_fixed,
+        "planned_for": planned_for or "",
+        "planned_for_date": planned_for_date,
+        "days_tag_to_release": days_tag_to_release,
+        "available_in": available_display,
+        "in_planned": in_planned,
+        "first_available": first_avail,
+        "state_history": act["state_history"],
+        "removed_while_open": removed_while_open,
+    }
+
+
+def format_in_planned(in_planned: bool, planned_for: str, first_available: str) -> str:
+    """In Planned cell: blank unless both a planned version and a site-matched first-available exist."""
+    if not (planned_for and first_available):
+        return ""
+    return "YES" if in_planned else "NO"
 
 
 MD_FILE = os.path.join("reports", "release_stoppers.md")
@@ -347,8 +495,8 @@ def write_markdown(rows: list[dict], no_history_count: int):
             first_fixed = f"{r['days_tag_to_first_fixed']:.1f}" if r["days_tag_to_first_fixed"] is not None else ""
             days_to_release = r["days_tag_to_release"] if r["days_tag_to_release"] is not None else ""
             available_in_str = ", ".join(r["available_in"])
-            in_planned_str = "YES" if r["in_planned"] else ("NO" if r["planned_for"] else "")
-            removed = "YES" if r["rider_stopper_removed_while_open"] else ""
+            in_planned_str = format_in_planned(r["in_planned"], r["planned_for"], r["first_available"])
+            removed = "YES" if r["removed_while_open"] else ""
             f.write(
                 f"| {issue_link} | {r['project']} | {r['summary']} | {r['created']} | {r['tag_added']} | {r['resolved']} | "
                 f"{r['days_to_tag']:.1f} | {r['days_tag_to_resolved']:.1f} | {first_fixed} | "
@@ -374,13 +522,13 @@ def write_csv(rows: list[dict]):
             first_fixed = f"{r['days_tag_to_first_fixed']:.1f}" if r["days_tag_to_first_fixed"] is not None else ""
             days_to_release = r["days_tag_to_release"] if r["days_tag_to_release"] is not None else ""
             available_in_str = ", ".join(r["available_in"])
-            in_planned_str = "YES" if r["in_planned"] else ("NO" if r["planned_for"] else "")
+            in_planned_str = format_in_planned(r["in_planned"], r["planned_for"], r["first_available"])
             writer.writerow([
                 r["id"], r["project"], link, r["summary"], r["created"], r["tag_added"], r["resolved"],
                 f"{r['days_to_tag']:.1f}", f"{r['days_tag_to_resolved']:.1f}", first_fixed,
                 r["planned_for"], r["planned_for_date"], days_to_release, available_in_str,
                 in_planned_str, r["first_available"],
-                r["state_history"], "YES" if r["rider_stopper_removed_while_open"] else "",
+                r["state_history"], "YES" if r["removed_while_open"] else "",
             ])
     print(f"CSV written to {CSV_FILE}")
 
@@ -407,90 +555,27 @@ def main():
     site_releases_map.update(FUTURE_RELEASES)
     print(f"Loaded {len(site_releases_map)} releases ({len(FUTURE_RELEASES)} future).\n")
 
+    print("Fetching per-project resolved states...")
+    resolved_state_map = fetch_resolved_state_map()
+    # Fallback for projects missing from the map: union of resolved states across known projects.
+    default_resolved_states = set().union(*resolved_state_map.values()) if resolved_state_map else set()
+    print(f"Loaded resolved states for {len(resolved_state_map)} projects.\n")
+
     print(f"Fetching activities for {len(issues)} issues (parallel)...")
     activities = fetch_all_activities([issue["idReadable"] for issue in issues])
 
     rows = []
     for issue in issues:
         issue_id = issue["idReadable"]
-        summary = issue["summary"]
-        created_ms = issue.get("created")
-        resolved_ms = issue.get("resolved")
-
-        if not created_ms or not resolved_ms:
+        if not issue.get("created") or not issue.get("resolved"):
             print(f"  [SKIP] {issue_id}: missing created or resolved timestamp")
             continue
-
-        act = activities[issue_id]
-
-        # Path B candidates qualify only if a stopper tag was added in history.
-        # Path A issues (currently tagged) always qualify.
-        if issue_id not in tagged_ids and not act["stopper_tag_added"]:
-            continue
-
-        created_dt = ms_to_dt(created_ms)
-        resolved_dt = ms_to_dt(resolved_ms)
-
-        tag_dt = act["tag_dt"]
-        assumed = tag_dt is None
-        if assumed:
-            tag_dt = created_dt
-
-        days_to_tag = (tag_dt - created_dt).total_seconds() / 86400
-        days_tag_to_resolved = (resolved_dt - tag_dt).total_seconds() / 86400
-        days_tag_to_first_fixed = (
-            (act["first_fixed_dt"] - tag_dt).total_seconds() / 86400
-            if act["first_fixed_dt"] is not None else None
+        row = compute_row(
+            issue, activities[issue_id], site_releases_map,
+            resolved_state_map, default_resolved_states, issue_id in tagged_ids,
         )
-
-        # End-of-day cutoff (UTC) on the tag-added date — captures values "set within the day".
-        eod = tag_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-        cutoff_ms = eod.timestamp() * 1000
-
-        cfs = issue.get("_cf", {})
-        current_planned = cf_to_str(cfs.get(PLANNED_FOR_FIELD))
-        current_fix = next((cf_to_str(cfs[f]) for f in FIX_VERSION_FIELDS if cfs.get(f)), None)
-
-        planned_for = value_at_cutoff(act["planned_for_changes"], cutoff_ms, current_planned)
-        if not planned_for:
-            planned_for = value_at_cutoff(act["fix_versions_changes"], cutoff_ms, current_fix)
-
-        available_display = [strip_build_suffix(v) for v in cf_to_list(cfs.get(AVAILABLE_IN_FIELD))]
-        available_display = [v for v in available_display if v]
-        available_lookup = [normalize_for_lookup(v) for v in available_display]
-
-        in_planned = planned_in_available(planned_for, available_lookup)
-
-        oldest = oldest_available(available_lookup, site_releases_map)
-        first_avail = oldest[0] if oldest else ""
-        first_avail_date = oldest[1] if oldest else None
-
-        # Date for Planned For; fall back to First Available's date if Planned For has no site match.
-        site_date = site_releases_map.get(planned_for) if planned_for else None
-        if site_date is None:
-            site_date = first_avail_date
-        planned_for_date = site_date.isoformat() if site_date else ""
-        days_tag_to_release = (site_date - tag_dt.date()).days if site_date else None
-
-        rows.append({
-            "id": issue_id,
-            "project": issue_id.split("-")[0],
-            "summary": summary,
-            "created": created_dt.strftime("%Y-%m-%d"),
-            "tag_added": tag_dt.strftime("%Y-%m-%d") + ("*" if assumed else ""),
-            "resolved": resolved_dt.strftime("%Y-%m-%d"),
-            "days_to_tag": days_to_tag,
-            "days_tag_to_resolved": days_tag_to_resolved,
-            "days_tag_to_first_fixed": days_tag_to_first_fixed,
-            "planned_for": planned_for or "",
-            "planned_for_date": planned_for_date,
-            "days_tag_to_release": days_tag_to_release,
-            "available_in": available_display,
-            "in_planned": in_planned,
-            "first_available": first_avail,
-            "state_history": act["state_history"],
-            "rider_stopper_removed_while_open": act["rider_stopper_removed_while_open"],
-        })
+        if row is not None:
+            rows.append(row)
 
     if not rows:
         print("No data to display.")
@@ -534,8 +619,8 @@ def main():
     for r in rows:
         first_fixed_str = f"{r['days_tag_to_first_fixed']:.1f}" if r["days_tag_to_first_fixed"] is not None else "N/A"
         days_to_rel_str = str(r["days_tag_to_release"]) if r["days_tag_to_release"] is not None else "N/A"
-        in_planned_str = "YES" if r["in_planned"] else ("NO" if r["planned_for"] else "")
-        removed_str = "YES" if r["rider_stopper_removed_while_open"] else ""
+        in_planned_str = format_in_planned(r["in_planned"], r["planned_for"], r["first_available"])
+        removed_str = "YES" if r["removed_while_open"] else ""
         print(
             f"{r['id']:<{col_id}}"
             f"{r['project']:<{col_proj}}"
@@ -564,9 +649,9 @@ def main():
         f"{avg_tag_to_resolved:>{col_days}.1f}"
     )
     print(f"\nTotal: {n}  |  With tag history: {n - no_history_count}  |  Assumed tagged at creation (*): {no_history_count}")
-    removed_count = sum(1 for r in rows if r["rider_stopper_removed_while_open"])
+    removed_count = sum(1 for r in rows if r["removed_while_open"])
     if removed_count:
-        print(f"Rider-release-stopper removed while open: {removed_count} issue(s)")
+        print(f"Stopper tag removed while unresolved: {removed_count} issue(s)")
 
     write_markdown(rows, no_history_count)
     write_csv(rows)

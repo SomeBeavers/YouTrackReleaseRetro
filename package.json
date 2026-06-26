@@ -4,7 +4,8 @@
   "description": "This project aims to simplify the analysis of ReSharper releases by leveraging AI to process and interpret data from YouTrack. The Python-based tool will automatically gather information about issues from YouTrack, such as the number of tickets sorted by priority for each release in the current year. The AI component will then analyze this data to provide insights, trends, and potential areas for improvement.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "render:flow": "mmdc -i diagrams/release_stoppers_flow.mmd -o diagrams/release_stoppers_flow.svg -b white -p diagrams/puppeteer-config.json && mmdc -i diagrams/release_stoppers_flow.mmd -o diagrams/release_stoppers_flow.png -b white -s 2 -p diagrams/puppeteer-config.json"
   },
   "repository": {
     "type": "git",
@@ -18,6 +19,7 @@
   },
   "homepage": "https://github.com/SomeBeavers/YouTrackReleaseRetro#readme",
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.4.2",
     "@playwright/test": "^1.60.0"
   }
 }
