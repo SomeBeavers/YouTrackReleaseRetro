@@ -22,6 +22,9 @@ On top of the per-issue table it rolls up:
     (unclear states, tag removed while unresolved, tagged after the fix landed, reopened,
     separated tag groups), plus end states and Planned vs Available
 
+The rolling window spans several release cycles, so the newest major release that has shipped is
+also reported on its own, beside the full cohort (--release VERSION pins a different one).
+
 With --compare it also measures COMPARISON_COHORTS (other JetBrains products, same window
 and metric definitions) and reports the percentiles side by side.
 
@@ -1241,6 +1244,133 @@ def print_flow(rows: list[dict]):
     for label, count, share in planned_vs_available_volume(rows):
         print(f"    {label:<40}{count:>5}{share:>8}")
 
+# --------------------------------------------------------------------------------------
+# Latest-major-release focus
+# --------------------------------------------------------------------------------------
+
+# The rolling window mixes several release cycles. This slice answers the narrower question a
+# release retrospective asks: how did the stoppers of *this* release behave? Patch versions are
+# folded into their major release (2026.2.1 -> 2026.2) since they belong to the same cycle; the
+# exact-version breakdown is reported inside the slice so the GA/bugfix split stays visible.
+
+MAJOR_RELEASE_RE = re.compile(r"^(\d{4}\.\d+)(?:\.|$)")
+RELEASE_CSV_FILE = os.path.join("reports", "release_stoppers_release.csv")
+ALL_RELEASES_LABEL = "All releases"
+
+
+def major_release(version: str | None) -> str:
+    """'2026.2.1' -> '2026.2'; '2026.2' -> '2026.2'; 'Backlog' / '' -> ''."""
+    match = MAJOR_RELEASE_RE.match((version or "").strip())
+    return match.group(1) if match else ""
+
+
+def latest_shipped_major(calendar: dict[str, date], today: date | None = None) -> str:
+    """Newest major release on the calendar that has actually shipped, or "" if none has."""
+    today = date.today() if today is None else today
+    shipped = [(released, version) for version, released in calendar.items()
+               if MAJOR_RELEASE_RE.fullmatch(version) and released <= today]
+    return max(shipped)[1] if shipped else ""
+
+
+def release_slice(rows: list[dict], release: str) -> list[dict]:
+    """Rows whose Planned for belongs to the given major release."""
+    return [r for r in rows if major_release(r["planned_for"]) == release]
+
+
+def tag_date(row: dict) -> date | None:
+    """Tag-added date, dropping the assumed-at-creation marker."""
+    try:
+        return date.fromisoformat(row["tag_added"].rstrip("*"))
+    except ValueError:
+        return None
+
+
+def release_focus_blocks(rows: list[dict], release: str, ga_date: date | None) -> list[tuple]:
+    """The per-release section as (caption, header, rows, formats) blocks."""
+    slice_rows = release_slice(rows, release)
+    if not slice_rows:
+        return []
+    n = len(slice_rows)
+    count_formats = [FMT_TEXT, FMT_INT, FMT_PCT]
+
+    # Was the risk known before the release shipped? Measured against this release's GA date, not
+    # each ticket's own planned version, so GA and bugfix tickets are judged on the same line.
+    before = after = undated = 0
+    for row in slice_rows:
+        tagged = tag_date(row)
+        if ga_date is None or tagged is None:
+            undated += 1
+        elif tagged <= ga_date:
+            before += 1
+        else:
+            after += 1
+
+    not_normal = sum(1 for r in slice_rows if r["flow_anomalies"])
+    regressions = sum(1 for r in slice_rows if r["regression"])
+    missed_plan = sum(1 for r in slice_rows
+                      if format_in_planned(r["in_planned"], r["planned_for"],
+                                           r["first_available"]) == "NO")
+    summary = [
+        ["Release", release, None],
+        ["GA date", ga_date.isoformat() if ga_date else "not shipped yet", None],
+        ["Tickets", n, share_value(n, len(rows))],
+        ["Tagged on or before GA", before, share_value(before, n)],
+        ["Tagged after GA", after, share_value(after, n)],
+        ["Outside the expected flow", not_normal, share_value(not_normal, n)],
+        ["Regressions", regressions, share_value(regressions, n)],
+        ["Planned != Available", missed_plan, share_value(missed_plan, n)],
+    ]
+    if undated:
+        summary.append(["No usable tag date", undated, share_value(undated, n)])
+
+    blocks = [(f"{release} summary", ["Metric", "Value", "Share"], summary,
+               [FMT_TEXT, FMT_TEXT, FMT_PCT])]
+    blocks += percentile_comparison_blocks({release: slice_rows, ALL_RELEASES_LABEL: rows})
+    blocks += [
+        ("Exact Planned for within the release", ["Planned for", "Tickets", "Share"],
+         [[label, count, share_value(count, n)]
+          for label, count, _ in build_volume(slice_rows, lambda r: r["planned_for"].strip()
+                                              or BLANK_PLANNED_LABEL)], count_formats),
+        ("By product", ["Product", "Tickets", "Share"],
+         [[label, count, share_value(count, n)]
+          for label, count, _ in product_volume(slice_rows)], count_formats),
+        ("By affected area", ["Affected area", "Tickets", "Share"],
+         [[label, count, share_value(count, n)]
+          for label, count, _, _ in subsystem_volume(slice_rows)], count_formats),
+        ("Flow anomalies", ["Anomaly", "Tickets", "Share"],
+         [[label, count, share_value(count, n)]
+          for label, count, _ in flow_anomaly_volume(slice_rows)], count_formats),
+        ("Tickets", ISSUE_TABLE_HEADER, [issue_table_row(r) for r in slice_rows],
+         ISSUE_TABLE_FORMATS),
+    ]
+    return blocks
+
+
+def write_release_focus(rows: list[dict], release: str, ga_date: date | None):
+    blocks = release_focus_blocks(rows, release, ga_date)
+    if not blocks:
+        print(f"No tickets planned for {release}; skipping the release focus.")
+        return
+    with open(MD_FILE, "a", encoding="utf-8") as f:
+        f.write(f"\n## Release focus: {release}\n\n")
+        f.write(f"Stoppers whose *Planned for* belongs to the {release} cycle, patch versions "
+                f"included. *Planned for* is the value as of the tag-added day, so this is the "
+                f"release the ticket was called a stopper *for* — not wherever it ended up.\n")
+        write_md_blocks(f, blocks)
+    print(f"Release focus appended to {MD_FILE}")
+    write_csv_blocks(RELEASE_CSV_FILE, blocks)
+
+
+def print_release_focus(rows: list[dict], release: str, ga_date: date | None):
+    slice_rows = release_slice(rows, release)
+    if not slice_rows:
+        return
+    blocks = release_focus_blocks(rows, release, ga_date)
+    print(f"\nRelease focus: {release} "
+          f"(GA {ga_date.isoformat() if ga_date else 'not shipped yet'})")
+    for label, value, share in blocks[0][2]:
+        print(f"    {label:<28}{cell_text(value):>12}{cell_text(share, FMT_PCT):>9}")
+
 def write_comparison(rows: list[dict], cohorts: dict[str, list[dict]]):
     """Append the cross-product comparison to the report and write it as its own CSV."""
     blocks = comparison_blocks({DOTNET_COHORT_NAME: rows, **cohorts})
@@ -1429,6 +1559,11 @@ def cohort_summary_block(cohorts: dict[str, list[dict]]) -> tuple:
 
 
 def comparison_blocks(cohorts: dict[str, list[dict]]) -> list[tuple]:
+    """Cohort summary plus the percentile comparison."""
+    return [cohort_summary_block(cohorts)] + percentile_comparison_blocks(cohorts)
+
+
+def percentile_comparison_blocks(cohorts: dict[str, list[dict]]) -> list[tuple]:
     """Percentile comparison as (caption, header, rows, formats) blocks.
 
     One block per metric; a column per cohort per basis, so the assumed-tag artifact is visible
@@ -1441,7 +1576,7 @@ def comparison_blocks(cohorts: dict[str, list[dict]]) -> list[tuple]:
               for name, rows in cohorts.items()
               for label, drop in COMPARISON_BASES}
 
-    blocks = [cohort_summary_block(cohorts)]
+    blocks = []
     header = ["Percentile"] + [f"{name} ({label})" for name, label, _ in columns]
     formats = [FMT_TEXT] + [FMT_NUM1] * len(columns)
     for metric, _, is_reversed in ROLLUP_METRICS:
@@ -1455,7 +1590,8 @@ def comparison_blocks(cohorts: dict[str, list[dict]]) -> list[tuple]:
     return blocks
 
 def xlsx_sheets(rows: list[dict],
-                cohorts: dict[str, list[dict]] | None = None) -> list[tuple[str, list[tuple]]]:
+                cohorts: dict[str, list[dict]] | None = None,
+                release: str = "", ga_date=None) -> list[tuple[str, list[tuple]]]:
     """Workbook layout: [(sheet title, [(caption, header, data rows, column formats), ...])].
 
     Pure — no openpyxl needed, so the layout is testable on its own. Tabs mirror the tracking
@@ -1536,7 +1672,13 @@ def xlsx_sheets(rows: list[dict],
             [FMT_TEXT] * 9 + [FMT_INT] * 3 + [FMT_TEXT] * 2,
         )]),
         ("Flow", flow_blocks(rows)),
-    ] + comparison_sheets(rows, cohorts)
+    ] + release_sheets(rows, release, ga_date) + comparison_sheets(rows, cohorts)
+
+
+def release_sheets(rows: list[dict], release: str, ga_date) -> list[tuple[str, list[tuple]]]:
+    """One tab for the latest-major-release slice (empty if there is nothing in it)."""
+    blocks = release_focus_blocks(rows, release, ga_date) if release else []
+    return [(sheet_name(f"Release {release}"), blocks)] if blocks else []
 
 
 def comparison_sheets(rows: list[dict],
@@ -1553,7 +1695,8 @@ def comparison_sheets(rows: list[dict],
     return sheets
 
 
-def write_xlsx(rows: list[dict], cohorts: dict[str, list[dict]] | None = None):
+def write_xlsx(rows: list[dict], cohorts: dict[str, list[dict]] | None = None,
+               release: str = "", ga_date=None):
     """One workbook, one tab per rollup. Skipped with a note if openpyxl isn't installed."""
     try:
         from openpyxl import Workbook
@@ -1569,7 +1712,7 @@ def write_xlsx(rows: list[dict], cohorts: dict[str, list[dict]] | None = None):
 
     wb = Workbook()
     wb.remove(wb.active)
-    for title, blocks in xlsx_sheets(rows, cohorts):
+    for title, blocks in xlsx_sheets(rows, cohorts, release, ga_date):
         ws = wb.create_sheet(title[:31])  # Excel caps sheet names at 31 chars
         widths: dict[int, int] = {}
         freeze_at = None
@@ -1608,7 +1751,7 @@ def write_xlsx(rows: list[dict], cohorts: dict[str, list[dict]] | None = None):
     print(f"Workbook written to {XLSX_FILE} ({len(wb.sheetnames)} tabs)")
 
 
-def main(compare: bool = False):
+def main(compare: bool = False, release: str | None = None):
     # Path A: issues that currently carry a stopper tag (always qualify).
     print(f"Fetching resolved issues tagged {SEARCH_TAGS}...")
     issues = fetch_issues()
@@ -1728,6 +1871,13 @@ def main(compare: bool = False):
 
     print_rollups(rows)
     print_flow(rows)
+    release = release or latest_shipped_major(site_releases_map)
+    ga_date = site_releases_map.get(release) if release else None
+    if release:
+        print_release_focus(rows, release, ga_date)
+    else:
+        print("No shipped major release found on the calendar; "
+              "skipping the release focus.")
 
     cohorts = {}
     if compare and COMPARISON_COHORTS:
@@ -1743,9 +1893,11 @@ def main(compare: bool = False):
     write_csv(rows)
     write_rollup_csvs(rows)
     write_flow_csv(rows)
+    if release:
+        write_release_focus(rows, release, ga_date)
     if cohorts:
         write_comparison(rows, cohorts)
-    write_xlsx(rows, cohorts)
+    write_xlsx(rows, cohorts, release, ga_date)
 
 
 def print_comparison(rows: list[dict], cohorts: dict[str, list[dict]]):
@@ -1813,6 +1965,9 @@ def print_rollups(rows: list[dict]):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser.add_argument("--release", metavar="VERSION",
+                        help="major release to focus on (e.g. 2026.2); defaults to the newest "
+                             "release on the calendar that has already shipped")
     parser.add_argument("--compare", action="store_true",
                         help="also measure the comparison cohorts (%s) and add the "
                              "cross-product comparison to the report; roughly doubles runtime"

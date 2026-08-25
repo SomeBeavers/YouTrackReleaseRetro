@@ -86,6 +86,33 @@ call: tickets are often discussed as regressions without the word appearing in e
 finds only a handful of extra tickets in practice. Drop `REGRESSION_BY_TEXT` from
 `classify_regression` if only the tag should count.
 
+### Latest-major-release focus
+
+The rolling `RESOLVED_DATE_RANGE` window spans several release cycles, which is right for trends but
+wrong for the question a release retrospective asks. The release focus narrows everything to one
+major release and prints it beside the full cohort. It is a filter over rows that already exist —
+no extra YouTrack calls — so it runs by default; `--release VERSION` overrides the target.
+
+**Which release.** `latest_shipped_major` takes the newest two-component version on the calendar
+whose GA date has passed. Patch releases never qualify (2026.1.4 is not a major), and a version that
+has not shipped is skipped — so on 2026-07-21 the answer is still 2026.1, and it rolls forward on its
+own as releases ship.
+
+**What is in the slice.** Rows whose `Planned for` belongs to that release, patch versions folded in
+(`2026.2.1` → `2026.2`, `2025.2.X` → `2025.2`) because they are the same cycle. The exact-version
+breakdown is reported inside the slice so the GA-versus-bugfix split stays visible.
+
+Two things to keep in mind when reading it:
+
+- The basis is `Planned for` **as of the tag-added day**, the same value the planned-version volume
+  uses. So the slice is the set of tickets that were called a stopper *for* that release, not
+  whichever release they eventually shipped in. A ticket re-planned later still counts here.
+- `Tagged on or before GA` / `Tagged after GA` compares the tag date to **the release's** GA date,
+  not to each ticket's own planned version. That way GA and bugfix tickets are judged on the same
+  line — a ticket planned for `2026.2.1` and tagged after `2026.2` shipped is correctly "after GA".
+  Tickets with no usable tag date, and every ticket when the release has not shipped, are reported
+  in their own row rather than folded into either side.
+
 ### Flow conformance
 
 Does the ticket follow the lifecycle a stopper is supposed to follow? Taken from the .NET Release

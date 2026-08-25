@@ -50,7 +50,25 @@ It writes, alongside a console rendering:
 | `reports/release_stoppers_regressions.csv` | Regression counts by classification + the regression tickets |
 | `reports/release_stoppers_watchlist.csv` | Tickets with customer signal (support tickets / votes / licenses) |
 | `reports/release_stoppers_flow.csv` | Flow conformance: anomaly counts, unclear/end states, Planned vs Available |
+| `reports/release_stoppers_release.csv` | The latest major release on its own, beside the full cohort |
 | `reports/release_stoppers.xlsx` | All of the above as one Excel workbook, a tab per rollup |
+
+### Focusing on one release
+
+The rolling window spans several release cycles. The report also narrows to the newest major release
+that has shipped — auto-detected from the release calendar, currently `2026.2` — and puts its
+percentiles, volumes and flow anomalies next to the full cohort, plus a `Tagged before / after GA`
+split. Patch versions count as part of their major release.
+
+This is a filter over rows already fetched, so it costs nothing extra and runs by default. To pin a
+different release:
+
+```bash
+.venv\Scripts\python.exe release_stoppers.py --release 2026.1
+```
+
+See the [release-focus section](release_stoppers_flow.md#latest-major-release-focus) for what
+`Planned for` means here and how the GA split is measured.
 
 ### Comparing against other JetBrains products
 
@@ -71,8 +89,9 @@ caveats that make a comparison fair.
 ### Excel workbook
 
 `reports/release_stoppers.xlsx` holds everything in one file — tabs *Release stoppers*, *Percentiles*,
-*Product volume*, *Planned versions*, *Affected areas*, *Regressions*, *Watchlist*, *Flow*, and with
-`--compare` also *Comparison* and one tab of raw rows per comparison cohort. Headers are frozen,
+*Product volume*, *Planned versions*, *Affected areas*, *Regressions*, *Watchlist*, *Flow*,
+*Release &lt;version&gt;*, and with `--compare` also *Comparison* and one tab of raw rows per
+comparison cohort. Headers are frozen,
 issue links are clickable, and day counts and shares are written as real numbers (not text) so they
 can be charted directly. Upload it to Google Drive and Sheets will convert it.
 
@@ -118,6 +137,7 @@ dicts and activity payloads those consume:
 |---|---|
 | `tests/test_release_stoppers.py` | Row building (Created, Tag Added, Days, Planned For, In Planned, First Available, State History, Removed While Open), percentiles/volumes, classification, workbook layout |
 | `tests/test_flow.py` | Flow conformance: the anomaly detectors, timeline exposure, and the flow rollups |
+| `tests/test_release_focus.py` | Release detection, the major/patch grouping, and the release slice |
 | `tests/test_cohorts.py` | Release-calendar GA precedence, tag vocabularies, comparison blocks and rendering |
 
 ```bash
