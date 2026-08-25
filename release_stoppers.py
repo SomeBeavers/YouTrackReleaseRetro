@@ -18,6 +18,9 @@ On top of the per-issue table it rolls up:
   - Affected area from the Subsystem field, cross-tabbed by project, plus each project's top area
   - Regressions (.net-regression tag, or the word "regression" in summary/description)
   - A customer-signal watchlist (linked support tickets / votes / affected licenses)
+  - Flow conformance: how often a ticket deviates from the expected stopper lifecycle, and how
+    (unclear states, tag removed while unresolved, tagged after the fix landed, reopened,
+    separated tag groups), plus end states and Planned vs Available
 
 With --compare it also measures COMPARISON_COHORTS (other JetBrains products, same window
 and metric definitions) and reports the percentiles side by side.
@@ -91,6 +94,7 @@ REGRESSION_BY_TEXT = "mentions regression"
 VOTES_SIGNAL_MIN = 2
 SUPPORT_SIGNAL_MIN = 1
 NO_SUBSYSTEM_LABEL = "(no subsystem)"
+UNKNOWN_STATE_LABEL = "(unknown)"
 
 
 class TagVocabulary(NamedTuple):
@@ -399,6 +403,11 @@ def parse_activities(activities: list[dict], vocabulary: TagVocabulary | None = 
     elif fallback_times:
         tag_dt = ms_to_dt(min(fallback_times))
 
+    # A removal recorded before any State change has no preceding state in hand at the time; the
+    # ticket was in its initial state throughout, so use that for the breakdown. Kept separate
+    # from stopper_removed_states so the Removed While Open verdict is untouched.
+    removed_states_labelled = [s if s else initial_state for s in stopper_removed_states]
+
     timeline.sort(key=lambda e: e[0])
     labels = [label for _, label in timeline]
     if initial_state and (not labels or labels[0] != initial_state):
@@ -409,7 +418,9 @@ def parse_activities(activities: list[dict], vocabulary: TagVocabulary | None = 
         "tag_dt": tag_dt,
         "first_fixed_dt": first_fixed_dt,
         "state_history": state_history,
+        "timeline_labels": labels,      # ordered events: state names + Tag added / Tag removed
         "stopper_removed_states": stopper_removed_states,
+        "removed_states_labelled": removed_states_labelled,
         "stopper_tag_added": stopper_tag_added,
         "eap_stopper_added": eap_stopper_added,
         "release_stopper_added": bool(primary_times),  # a real release-stopper tag (MEASURE_TAGS) was added
@@ -487,6 +498,99 @@ def fetch_all_activities(issue_ids: list[str],
         return dict(results)
 
 
+# --------------------------------------------------------------------------------------
+# Flow conformance (does the ticket follow the expected stopper lifecycle?)
+# --------------------------------------------------------------------------------------
+
+# Expected ("normal") lifecycle:
+#   intake / triage / open / in-progress
+#     -> one or more consecutive "Tag added"
+#     -> Fixed in Branch / Fixed
+#     -> optional Verified
+#     -> optional final "Tag removed"
+# Anything else is reported as one or more named anomalies below. A ticket is "not normal" if it
+# has at least one; the same ticket can carry several, so the anomaly counts overlap and only the
+# not-normal total is a partition of the cohort.
+
+TAG_ADDED_LABEL = "Tag added"
+TAG_REMOVED_LABEL = "Tag removed"
+TAG_LABELS = (TAG_ADDED_LABEL, TAG_REMOVED_LABEL)
+
+# Where the fix is considered to have landed, for flow purposes. Wider than FIXED_STATES on
+# purpose: the expected flow reads "Fixed in Branch / Fixed", while FIXED_STATES anchors the
+# Days Tag to First Fixed metric and must not change.
+FIX_LANDED_STATES = frozenset(FIXED_STATES) | {"Fixed in Branch"}
+
+# States that mean the ticket was not a clearly understood, reproducible defect.
+UNCLEAR_STATES = ("Duplicate", "Can't Reproduce", "Incomplete", "Waiting for Info",
+                  "To Reproduce", "Wait for Reply", "Obsolete")
+REOPENED_STATE = "Reopened"
+
+ANOMALY_UNCLEAR = "Unclear ticket state"
+ANOMALY_TAG_REMOVED_OPEN = "Tag removed while unresolved"
+ANOMALY_TAG_AFTER_FIXED = "Tag added after first Fixed / Verified"
+ANOMALY_REOPENED = "Reopened"
+ANOMALY_SPLIT_TAGS = "Separated Tag added groups"
+# Reported in this order — it is the order the retrospective deck presents them in.
+FLOW_ANOMALIES = (ANOMALY_UNCLEAR, ANOMALY_TAG_REMOVED_OPEN, ANOMALY_TAG_AFTER_FIXED,
+                  ANOMALY_REOPENED, ANOMALY_SPLIT_TAGS)
+
+
+def state_labels(labels: list[str]) -> list[str]:
+    """Timeline with the tag events stripped, leaving the state transitions."""
+    return [l for l in labels if l not in TAG_LABELS]
+
+
+def count_tag_added_groups(labels: list[str]) -> int:
+    """Number of runs of consecutive "Tag added" events.
+
+    More than one run means the tag was taken off and put back with real work in between, i.e.
+    the stopper decision was revisited rather than simply re-applied.
+    """
+    groups = 0
+    for index, label in enumerate(labels):
+        if label == TAG_ADDED_LABEL and (index == 0 or labels[index - 1] != TAG_ADDED_LABEL):
+            groups += 1
+    return groups
+
+
+def tag_added_after_first_fixed(labels: list[str]) -> bool:
+    """True when a stopper tag was added after the fix had already landed.
+
+    "Landed" includes Fixed in Branch, matching the expected-flow wording above; note that is
+    deliberately wider than FIXED_STATES, which anchors the Days Tag to First Fixed metric and is
+    left alone. Any tag added after that point counts, not just the first one, so a ticket
+    re-tagged after its fix is flagged here as well as under separated tag groups.
+    """
+    landed = next((i for i, l in enumerate(labels) if l in FIX_LANDED_STATES), None)
+    return landed is not None and TAG_ADDED_LABEL in labels[landed + 1:]
+
+
+def analyze_flow(labels: list[str], removed_while_open: bool) -> dict:
+    """Flow findings for one ticket, from its ordered event timeline. Pure."""
+    states = state_labels(labels)
+    unclear = [s for s in UNCLEAR_STATES if s in states]
+    tag_groups = count_tag_added_groups(labels)
+    anomalies = []
+    if unclear:
+        anomalies.append(ANOMALY_UNCLEAR)
+    if removed_while_open:
+        anomalies.append(ANOMALY_TAG_REMOVED_OPEN)
+    if tag_added_after_first_fixed(labels):
+        anomalies.append(ANOMALY_TAG_AFTER_FIXED)
+    if REOPENED_STATE in states:
+        anomalies.append(ANOMALY_REOPENED)
+    if tag_groups > 1:
+        anomalies.append(ANOMALY_SPLIT_TAGS)
+    return {
+        "end_state": states[-1] if states else "",
+        "unclear_states": unclear,
+        "reopened": REOPENED_STATE in states,
+        "tag_after_fixed": tag_added_after_first_fixed(labels),
+        "tag_groups": tag_groups,
+        "anomalies": anomalies,
+    }
+
 def compute_row(
     issue: dict,
     act: dict,
@@ -521,6 +625,15 @@ def compute_row(
     # Stopper tag removed while the issue was in an unresolved (#unresolved) state.
     resolved_states = resolved_state_map.get(issue_id.split("-")[0], default_resolved_states)
     removed_while_open = any(s not in resolved_states for s in act["stopper_removed_states"])
+    # The state the ticket sat in when the tag came off, for the removal breakdown. A removal with
+    # no known preceding state still counts as "while unresolved" above, so label it rather than
+    # dropping it.
+    open_removals = [labelled for raw, labelled
+                     in zip(act["stopper_removed_states"], act["removed_states_labelled"])
+                     if raw not in resolved_states]
+    removed_while_open_state = (next((s for s in open_removals if s), UNKNOWN_STATE_LABEL)
+                                if open_removals else "")
+    flow = analyze_flow(act["timeline_labels"], removed_while_open)
 
     tag_dt = act["tag_dt"]
     assumed = tag_dt is None
@@ -591,6 +704,13 @@ def compute_row(
         "first_available": first_avail,
         "state_history": act["state_history"],
         "removed_while_open": removed_while_open,
+        "removed_while_open_state": removed_while_open_state,
+        "end_state": flow["end_state"],
+        "unclear_states": flow["unclear_states"],
+        "reopened": flow["reopened"],
+        "tag_after_fixed": flow["tag_after_fixed"],
+        "tag_groups": flow["tag_groups"],
+        "flow_anomalies": flow["anomalies"],
     }
 
 
@@ -748,6 +868,61 @@ def regression_volume(rows: list[dict]) -> list[tuple[str, int, str]]:
     counts = Counter(r["regression"] for r in rows if r["regression"])
     return [(label, n, fmt_share(n, total)) for label, n in counts.most_common()]
 
+
+def flow_conformance(rows: list[dict]) -> list[tuple[str, int, str]]:
+    """Normal vs not-normal split. Not-normal = at least one flow anomaly."""
+    total = len(rows)
+    not_normal = sum(1 for r in rows if r["flow_anomalies"])
+    return [("Not normal", not_normal, fmt_share(not_normal, total)),
+            ("Normal", total - not_normal, fmt_share(total - not_normal, total))]
+
+
+def flow_anomaly_volume(rows: list[dict]) -> list[tuple[str, int, str]]:
+    """Ticket count per anomaly. These overlap — one ticket can carry several."""
+    total = len(rows)
+    counts = Counter(a for r in rows for a in r["flow_anomalies"])
+    return [(name, counts.get(name, 0), fmt_share(counts.get(name, 0), total))
+            for name in FLOW_ANOMALIES if counts.get(name)]
+
+
+def unclear_state_volume(rows: list[dict]) -> list[tuple[str, int, str]]:
+    """Tickets that passed through each unclear state (a ticket can appear under several)."""
+    total = len(rows)
+    counts = Counter(s for r in rows for s in r["unclear_states"])
+    return [(state, counts[state], fmt_share(counts[state], total))
+            for state, _ in counts.most_common()]
+
+
+def end_state_volume(rows: list[dict]) -> list[tuple[str, int, str]]:
+    """Where tickets finished. Unclear end states are the interesting tail."""
+    return build_volume(rows, lambda r: r["end_state"] or UNKNOWN_STATE_LABEL)
+
+
+def tag_removal_state_volume(rows: list[dict]) -> list[tuple[str, int, str]]:
+    """For tags removed while unresolved: the state the ticket sat in at removal."""
+    removed = [r for r in rows if r["removed_while_open"]]
+    total = len(removed)
+    counts = Counter(r["removed_while_open_state"] or UNKNOWN_STATE_LABEL for r in removed)
+    return [(state, count, fmt_share(count, total)) for state, count in counts.most_common()]
+
+
+def planned_vs_available_volume(rows: list[dict]) -> list[tuple[str, int, str]]:
+    """Release-planning quality: did the fix ship in the version it was planned for?
+
+    Blank means the question cannot be answered - either no Planned for was set, or no Available in
+    entry matched the release calendar - so it is reported rather than folded into "no".
+    """
+    def label(row):
+        verdict = format_in_planned(row["in_planned"], row["planned_for"], row["first_available"])
+        return {"YES": "Planned == Available",
+                "NO": "Planned != Available"}.get(verdict, "Not comparable")
+    return build_volume(rows, label)
+
+
+def flow_anomaly_rows(rows: list[dict]) -> list[dict]:
+    """Tickets that deviated from the expected lifecycle, most anomalies first."""
+    return sorted((r for r in rows if r["flow_anomalies"]),
+                  key=lambda r: (-len(r["flow_anomalies"]), r["project"], r["id"]))
 
 def signal_rows(rows: list[dict]) -> list[dict]:
     """Stoppers carrying customer signal, strongest first."""
@@ -914,6 +1089,14 @@ def write_markdown_rollups(f, rows: list[dict]):
                     f"{subsystem_label(r)} | {r['summary']} | {r['created']} | {r['resolved']} | "
                     f"{r['planned_for']} | {', '.join(r['available_in'])} |\n")
 
+    not_normal = sum(1 for r in rows if r["flow_anomalies"])
+    f.write(f"\n## Flow conformance ({not_normal} of {n} outside the expected lifecycle)\n\n")
+    f.write("Expected: intake/triage/open/in-progress -> one or more consecutive *Tag added* -> "
+            "*Fixed in Branch* / *Fixed* -> optional *Verified* -> optional final *Tag removed*. "
+            "A ticket is counted as not normal if it shows at least one of the anomalies below; "
+            "the anomalies overlap, so only the conformance split is a partition.\n")
+    write_md_blocks(f, flow_blocks(rows))
+
     watchlist = signal_rows(rows)
     f.write(f"\n## Customer-signal watchlist ({len(watchlist)} of {n})\n\n")
     f.write(f"Stoppers with at least {SUPPORT_SIGNAL_MIN} linked support ticket(s) or "
@@ -993,6 +1176,70 @@ def write_md_crosstab(f, label_header: str, volume, projects: list[str], total: 
     f.write(f"| **Total** | **{total}** | **{fmt_share(total, total)}** | "
             + " | ".join("" for _ in projects) + " |\n")
 
+
+FLOW_CSV_FILE = os.path.join("reports", "release_stoppers_flow.csv")
+
+
+def flow_blocks(rows: list[dict]) -> list[tuple]:
+    """The flow-conformance tables as (caption, header, rows, formats) blocks.
+
+    Denominators differ by table and are named in each header: the anomaly and state tables are
+    shares of all tickets, the removal breakdown is a share of removals only.
+    """
+    total = len(rows)
+    removals = sum(1 for r in rows if r["removed_while_open"])
+    count_formats = [FMT_TEXT, FMT_INT, FMT_PCT]
+
+    def counted(caption, label_header, share_header, volume, denominator):
+        return (caption, [label_header, "Tickets", share_header],
+                [[label, count, share_value(count, denominator)] for label, count, _ in volume],
+                count_formats)
+
+    anomalies = flow_anomaly_rows(rows)
+    blocks = [
+        counted("Flow conformance", "Flow", "Share", flow_conformance(rows), total),
+        counted("Anomalies (overlapping — a ticket can carry several)", "Anomaly",
+                "Share of all tickets", flow_anomaly_volume(rows), total),
+        counted("Unclear ticket states passed through", "State", "Share of all tickets",
+                unclear_state_volume(rows), total),
+        counted("End state", "End state", "Share of all tickets", end_state_volume(rows), total),
+        counted("Tag removed while unresolved — state at removal", "Previous state",
+                "Share of removals", tag_removal_state_volume(rows), removals),
+        counted("Planned vs Available", "Verdict", "Share of all tickets",
+                planned_vs_available_volume(rows), total),
+    ]
+    if anomalies:
+        blocks.append((
+            "Tickets outside the expected flow",
+            ["Issue", "Project", "Anomalies", "Anomaly count", "End state", "Unclear states",
+             "Tag added groups", "Reopened", "Tag after first fix", "Summary", "State History"],
+            [[r["id"], r["project"], "; ".join(r["flow_anomalies"]), len(r["flow_anomalies"]),
+              r["end_state"], ", ".join(r["unclear_states"]), r["tag_groups"],
+              "YES" if r["reopened"] else "", "YES" if r["tag_after_fixed"] else "",
+              r["summary"], r["state_history"]] for r in anomalies],
+            [FMT_TEXT] * 3 + [FMT_INT] + [FMT_TEXT] * 2 + [FMT_INT] + [FMT_TEXT] * 4,
+        ))
+    return blocks
+
+
+def write_flow_csv(rows: list[dict]):
+    write_csv_blocks(FLOW_CSV_FILE, flow_blocks(rows))
+
+
+def print_flow(rows: list[dict]):
+    total = len(rows)
+    not_normal = sum(1 for r in rows if r["flow_anomalies"])
+    print(f"\nFlow conformance: {not_normal} of {total} tickets deviate from the expected "
+          f"lifecycle ({fmt_share(not_normal, total)})")
+    for label, count, share in flow_anomaly_volume(rows):
+        print(f"    {label:<40}{count:>5}{share:>8}")
+    if any(r["removed_while_open"] for r in rows):
+        print("  Tag removed while unresolved, by state at removal:")
+        for label, count, share in tag_removal_state_volume(rows)[:8]:
+            print(f"    {label:<40}{count:>5}{share:>8}")
+    print("  Planned vs Available:")
+    for label, count, share in planned_vs_available_volume(rows):
+        print(f"    {label:<40}{count:>5}{share:>8}")
 
 def write_comparison(rows: list[dict], cohorts: dict[str, list[dict]]):
     """Append the cross-product comparison to the report and write it as its own CSV."""
@@ -1288,6 +1535,7 @@ def xlsx_sheets(rows: list[dict],
              for r in watchlist],
             [FMT_TEXT] * 9 + [FMT_INT] * 3 + [FMT_TEXT] * 2,
         )]),
+        ("Flow", flow_blocks(rows)),
     ] + comparison_sheets(rows, cohorts)
 
 
@@ -1479,6 +1727,7 @@ def main(compare: bool = False):
         print(f"Stopper tag removed while unresolved: {removed_count} issue(s)")
 
     print_rollups(rows)
+    print_flow(rows)
 
     cohorts = {}
     if compare and COMPARISON_COHORTS:
@@ -1493,6 +1742,7 @@ def main(compare: bool = False):
     write_markdown(rows, no_history_count)
     write_csv(rows)
     write_rollup_csvs(rows)
+    write_flow_csv(rows)
     if cohorts:
         write_comparison(rows, cohorts)
     write_xlsx(rows, cohorts)

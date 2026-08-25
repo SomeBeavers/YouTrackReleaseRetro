@@ -377,7 +377,12 @@ def rollup_row(project: str, to_tag=0.0, to_resolved=0.0, to_fixed=None,
             "planned_for": planned, "subsystem": subsystem, "regression": regression,
             "votes": votes, "support_tickets": support, "affected_licenses": licenses,
             "signal": rs.classify_signal(votes, support),
-            "created": "2026-01-01", "resolved": "2026-02-01", "available_in": []}
+            "created": "2026-01-01", "resolved": "2026-02-01", "available_in": [],
+            "removed_while_open": False, "removed_while_open_state": "",
+            "end_state": "Verified", "unclear_states": [], "reopened": False,
+            "tag_after_fixed": False, "tag_groups": 1, "flow_anomalies": [],
+            "state_history": "Open -> Tag added -> Fixed", "in_planned": False,
+            "first_available": "", "tag_added": "2026-01-02", "planned_for_date": ""}
 
 
 class TestPercentileHelpers(unittest.TestCase):
@@ -653,7 +658,7 @@ class TestXlsxSheets(unittest.TestCase):
         sheets, _ = self.sheets()
         self.assertEqual(list(sheets), ["Release stoppers", "Percentiles", "Product volume",
                                         "Planned versions", "Affected areas", "Regressions",
-                                        "Watchlist"])
+                                        "Watchlist", "Flow"])
 
     def test_sheet_titles_fit_excels_limit(self):
         sheets, _ = self.sheets()

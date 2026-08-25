@@ -49,6 +49,7 @@ It writes, alongside a console rendering:
 | `reports/release_stoppers_subsystems.csv` | Affected area by `Subsystem` × project, and each project's top area |
 | `reports/release_stoppers_regressions.csv` | Regression counts by classification + the regression tickets |
 | `reports/release_stoppers_watchlist.csv` | Tickets with customer signal (support tickets / votes / licenses) |
+| `reports/release_stoppers_flow.csv` | Flow conformance: anomaly counts, unclear/end states, Planned vs Available |
 | `reports/release_stoppers.xlsx` | All of the above as one Excel workbook, a tab per rollup |
 
 ### Comparing against other JetBrains products
@@ -70,7 +71,7 @@ caveats that make a comparison fair.
 ### Excel workbook
 
 `reports/release_stoppers.xlsx` holds everything in one file — tabs *Release stoppers*, *Percentiles*,
-*Product volume*, *Planned versions*, *Affected areas*, *Regressions*, *Watchlist*, and with
+*Product volume*, *Planned versions*, *Affected areas*, *Regressions*, *Watchlist*, *Flow*, and with
 `--compare` also *Comparison* and one tab of raw rows per comparison cohort. Headers are frozen,
 issue links are clickable, and day counts and shares are written as real numbers (not text) so they
 can be charted directly. Upload it to Google Drive and Sheets will convert it.
@@ -109,10 +110,15 @@ headless Chromium for the renderer (via puppeteer).
 
 ### Tests
 
-The row-building and rollup logic is covered by `tests/test_release_stoppers.py` (no network needed —
-it feeds mocked tickets through the pure `parse_activities` / `compute_row` functions and checks
-Created, Tag Added, Days, Planned For, In Planned, First Available, State History, Removed While
-Open, etc., then the percentile/volume builders on top of them):
+No network is needed for any of them — the YouTrack-facing code is split into pure parsers
+(`parse_activities`) and pure builders (`compute_row`, the rollups), so tickets are mocked as the
+dicts and activity payloads those consume:
+
+| File | Covers |
+|---|---|
+| `tests/test_release_stoppers.py` | Row building (Created, Tag Added, Days, Planned For, In Planned, First Available, State History, Removed While Open), percentiles/volumes, classification, workbook layout |
+| `tests/test_flow.py` | Flow conformance: the anomaly detectors, timeline exposure, and the flow rollups |
+| `tests/test_cohorts.py` | Release-calendar GA precedence, tag vocabularies, comparison blocks and rendering |
 
 ```bash
 .venv\Scripts\python.exe -m unittest discover -s tests -v

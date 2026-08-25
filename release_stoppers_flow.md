@@ -86,6 +86,47 @@ call: tickets are often discussed as regressions without the word appearing in e
 finds only a handful of extra tickets in practice. Drop `REGRESSION_BY_TEXT` from
 `classify_regression` if only the tag should count.
 
+### Flow conformance
+
+Does the ticket follow the lifecycle a stopper is supposed to follow? Taken from the .NET Release
+Stoppers retrospective, whose expected flow is:
+
+> intake / triage / open / in-progress → one or more **consecutive** `Tag added` →
+> `Fixed in Branch` / `Fixed` → optional `Verified` → optional final `Tag removed`
+
+Rather than matching that grammar strictly, `analyze_flow` looks for the named deviations the
+retrospective reports, all read off the ordered event timeline (`timeline_labels`):
+
+| Anomaly | Fires when | Signal |
+|---|---|---|
+| `Unclear ticket state` | The ticket passed through any of Duplicate, Can't Reproduce, Incomplete, Waiting for Info, To Reproduce, Wait for Reply, Obsolete | Tagged without a solid repro; duplicates not found |
+| `Tag removed while unresolved` | The stopper tag came off while the ticket was still `#unresolved` | The stopper call was overturned |
+| `Tag added after first Fixed / Verified` | A tag was added after the fix had landed | Risk recognised late, after the code was already written |
+| `Reopened` | The ticket hit `Reopened` | Fix quality |
+| `Separated Tag added groups` | More than one run of consecutive `Tag added` events | The stopper decision was revisited, not merely re-applied |
+
+A ticket is **not normal** if it has at least one anomaly. The anomalies overlap — one ticket can
+carry all five — so only the normal/not-normal split is a partition; each anomaly row is a count of
+tickets, not a share of a whole.
+
+Two definitions are wider than they first look, both deliberately:
+
+- **"The fix landed" includes `Fixed in Branch`** (`FIX_LANDED_STATES`), matching the expected-flow
+  wording. This is *not* `FIXED_STATES`, which anchors `Days Tag to First Fixed` and must stay put.
+- **Any** later tag counts, not just the first, so a ticket re-tagged after its fix is flagged.
+
+Both were pinned down by reproducing the retrospective's counts: the narrow readings gave 27 where
+it reports 43, and the wide ones give 42.
+
+`Tag removed while unresolved` is also broken down by the state the ticket sat in at removal. A
+removal recorded before any `State` change has no preceding state to hand, so the ticket's initial
+state is used for that label — `stopper_removed_states` keeps the raw values so the
+`Removed While Open` verdict itself is unchanged.
+
+`Planned vs Available` reports release-planning quality with three buckets, not two: tickets where
+neither a `Planned for` nor a calendar-matched `Available in` exists are counted as
+**Not comparable** rather than silently folded into the misses.
+
 ### Comparison cohorts
 
 `--compare` measures the cohorts in `COMPARISON_COHORTS` alongside the dotnet report so the
