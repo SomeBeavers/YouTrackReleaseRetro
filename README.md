@@ -51,10 +51,27 @@ It writes, alongside a console rendering:
 | `reports/release_stoppers_watchlist.csv` | Tickets with customer signal (support tickets / votes / licenses) |
 | `reports/release_stoppers.xlsx` | All of the above as one Excel workbook, a tab per rollup |
 
+### Comparing against other JetBrains products
+
+```bash
+.venv\Scripts\python.exe release_stoppers.py --compare
+```
+
+Measures the cohorts in `COMPARISON_COHORTS` — currently `IJPL+JBR` (`blocking-release`) — over the
+same resolved-date window with the same metric definitions, and adds a **Cross-product comparison**
+section to the report, `reports/release_stoppers_comparison.csv`, and a *Comparison* tab plus one
+raw-data tab per cohort in the workbook. Roughly doubles runtime, so it is off by default.
+
+Adding a product means one entry in `COMPARISON_COHORTS`: a YouTrack query, the tags that mark a
+blocker there, and the product code for its release calendar. See the
+[cohorts section](release_stoppers_flow.md#comparison-cohorts) for the two reporting bases and the
+caveats that make a comparison fair.
+
 ### Excel workbook
 
 `reports/release_stoppers.xlsx` holds everything in one file — tabs *Release stoppers*, *Percentiles*,
-*Product volume*, *Planned versions*, *Affected areas*, *Regressions*, *Watchlist*. Headers are frozen,
+*Product volume*, *Planned versions*, *Affected areas*, *Regressions*, *Watchlist*, and with
+`--compare` also *Comparison* and one tab of raw rows per comparison cohort. Headers are frozen,
 issue links are clickable, and day counts and shares are written as real numbers (not text) so they
 can be charted directly. Upload it to Google Drive and Sheets will convert it.
 

@@ -86,6 +86,36 @@ call: tickets are often discussed as regressions without the word appearing in e
 finds only a handful of extra tickets in practice. Drop `REGRESSION_BY_TEXT` from
 `classify_regression` if only the tag should count.
 
+### Comparison cohorts
+
+`--compare` measures the cohorts in `COMPARISON_COHORTS` alongside the dotnet report so the
+percentiles can be read against another JetBrains product. A cohort is three things:
+
+| Field | Purpose |
+|---|---|
+| `query` | YouTrack query selecting the product's blockers; `RESOLVED_CLAUSE` is appended so the window matches dotnet's exactly |
+| `vocabulary` | A `TagVocabulary` — which tags anchor `tag_dt` and mark "was treated as a blocker" |
+| `product_code` | Which release calendar dates `Days Tag to Release` |
+
+The vocabulary is passed *into* `parse_activities` rather than swapped into module globals:
+`fetch_all_activities` parses on 16 worker threads, so mutating globals between cohorts would be a
+race.
+
+**Two reporting bases.** Every metric is reported twice, `all rows` and
+`tag date in history only`. When no tag-add event exists in history the tag date falls back to the
+creation date, forcing `Days to Tag` to 0 — and the assumed rate differs sharply by product
+(dotnet ~26%, IJPL ~17%), which flatters whichever product is missing more history. Quote the
+history-only column for `Days to Tag`; the other metrics are anchored on the same date and barely
+move between bases.
+
+**Per-product calendars matter.** GA dates diverge by up to 27 days (2025.3: ReSharper 11 Nov, IDEA
+8 Dec), so each cohort resolves `Planned for` against its own product's calendar — `RSU` for dotnet,
+`IIU` for IJPL/JBR. See `get_release_calendar` for the GA-precedence rule this needs.
+
+**Known limitation.** Cohorts are discovered by *current* tag only; there is no Path B equivalent.
+If a product strips its blocking tag after resolution, those issues are missing from its cohort —
+plausibly the slow ones, which would make its tail look better than it is.
+
 ### Customer-signal watchlist
 
 A ticket is listed when it has at least `SUPPORT_SIGNAL_MIN` linked support tickets or

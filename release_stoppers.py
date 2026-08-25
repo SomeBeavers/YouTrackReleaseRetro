@@ -19,6 +19,9 @@ On top of the per-issue table it rolls up:
   - Regressions (.net-regression tag, or the word "regression" in summary/description)
   - A customer-signal watchlist (linked support tickets / votes / affected licenses)
 
+With --compare it also measures COMPARISON_COHORTS (other JetBrains products, same window
+and metric definitions) and reports the percentiles side by side.
+
 Renderings: console, Markdown, one CSV per table, and an .xlsx workbook with a tab per rollup.
 
 Two discovery paths feed the report:
@@ -32,6 +35,7 @@ Two discovery paths feed the report:
   issue creation date is used as a fallback.
 """
 
+import argparse
 import csv
 import os
 import re
@@ -40,12 +44,14 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
+from typing import NamedTuple
 
-from release_versions import get_version_dates
+from release_versions import PRODUCT_CODE, get_release_calendar, get_version_dates
 
 YOUTRACK_URL = "https://youtrack.jetbrains.com/api"
 TOKEN = os.getenv("YOUTRACK_TOKEN")
 RESOLVED_DATE_RANGE = "2025-01-01 .. today"
+RESOLVED_CLAUSE = f"#Resolved resolved date: {RESOLVED_DATE_RANGE}"
 SEARCH_TAGS = ["dotnet-ex-release-stopper", "rider-ex-stopper"]
 MEASURE_TAGS = ["dotnet-release-stopper", "rider-release-stopper"]
 MEASURE_TAGS_FALLBACK = ["rider-ex-stopper"]
@@ -85,6 +91,30 @@ REGRESSION_BY_TEXT = "mentions regression"
 VOTES_SIGNAL_MIN = 2
 SUPPORT_SIGNAL_MIN = 1
 NO_SUBSYSTEM_LABEL = "(no subsystem)"
+
+
+class TagVocabulary(NamedTuple):
+    """Which tags mark a release blocker, for one product family.
+
+    Passed explicitly into parse_activities so a comparison cohort can use another product's
+    vocabulary without mutating module state — fetch_all_activities parses on worker threads,
+    where swapping globals between cohorts would be a race.
+    """
+    measure: tuple[str, ...]      # anchors tag_dt; defines "really was a release blocker"
+    fallback: tuple[str, ...]     # anchors tag_dt when no measure tag was ever added
+    stopper: frozenset            # any of these being added means "was treated as a blocker"
+    eap: str | None = None        # carrying only this one means EAP-only, and is excluded
+
+    @classmethod
+    def of(cls, measure, fallback=(), extra_stopper=(), eap=None):
+        return cls(tuple(measure), tuple(fallback),
+                   frozenset(measure) | frozenset(extra_stopper), eap)
+
+
+DEFAULT_VOCABULARY = TagVocabulary.of(
+    measure=MEASURE_TAGS, fallback=MEASURE_TAGS_FALLBACK,
+    extra_stopper=SEARCH_TAGS, eap=EAP_STOPPER_TAG,
+)
 BUILD_SUFFIX_RE = re.compile(r"\s*\([^)]*\)\s*$")
 NEXT_PUBLIC_BUILD_RE = re.compile(r"^Next\s+(\d+(?:\.\d+)*)\s+public build$", re.IGNORECASE)
 EAP_RC_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+(EAP|RC)\s+(\d+)$", re.IGNORECASE)
@@ -265,7 +295,7 @@ def fetch_issues() -> list[dict]:
     seen = set()
     result = []
     for tag in SEARCH_TAGS:
-        query = f"tag: {tag} #Resolved resolved date: {RESOLVED_DATE_RANGE}"
+        query = f"tag: {tag} {RESOLVED_CLAUSE}"
         response = client.get(
             f"{YOUTRACK_URL}/issues",
             params={
@@ -283,7 +313,7 @@ def fetch_issues() -> list[dict]:
     return result
 
 
-def fetch_activities(issue_id: str) -> dict:
+def fetch_activities(issue_id: str, vocabulary: TagVocabulary | None = None) -> dict:
     """Fetch tag and state change activities, return all parsed data."""
     response = client.get(
         f"{YOUTRACK_URL}/issues/{issue_id}/activities",
@@ -294,14 +324,16 @@ def fetch_activities(issue_id: str) -> dict:
         },
     )
     response.raise_for_status()
-    return parse_activities(response.json())
+    return parse_activities(response.json(), vocabulary)
 
 
-def parse_activities(activities: list[dict]) -> dict:
+def parse_activities(activities: list[dict], vocabulary: TagVocabulary | None = None) -> dict:
     """Parse raw YouTrack activity items (Tags + CustomField categories) into derived fields.
 
     Pure function (no I/O) so it can be unit-tested with mocked activity payloads.
+    `vocabulary` selects which tags count as blockers; defaults to the dotnet tags.
     """
+    vocab = DEFAULT_VOCABULARY if vocabulary is None else vocabulary
     activities = sorted(activities, key=lambda a: a.get("timestamp", 0))
 
     primary_times = []
@@ -324,18 +356,18 @@ def parse_activities(activities: list[dict]) -> dict:
             for item in (activity.get("added") or []):
                 if isinstance(item, dict):
                     name = item.get("name", "")
-                    if name in STOPPER_TAGS:
+                    if name in vocab.stopper:
                         stopper_tag_added = True
-                    if name == EAP_STOPPER_TAG:
+                    if vocab.eap and name == vocab.eap:
                         eap_stopper_added = True
-                    if name in MEASURE_TAGS:
+                    if name in vocab.measure:
                         primary_times.append(ts)
                         timeline.append((ts, "Tag added"))
-                    elif name in MEASURE_TAGS_FALLBACK:
+                    elif name in vocab.fallback:
                         fallback_times.append(ts)
                         timeline.append((ts, "Tag added"))
             for item in (activity.get("removed") or []):
-                if isinstance(item, dict) and item.get("name") in MEASURE_TAGS:
+                if isinstance(item, dict) and item.get("name") in vocab.measure:
                     stopper_removed_states.append(current_state)
                     timeline.append((ts, "Tag removed"))
 
@@ -394,8 +426,8 @@ def fetch_priority_candidates() -> list[dict]:
     """
     priority_clause = ", ".join(SCAN_PRIORITIES)
     query = (
-        f"project: {', '.join(SCAN_PROJECTS)} #Resolved "
-        f"resolved date: {RESOLVED_DATE_RANGE} Priority: {priority_clause}"
+        f"project: {', '.join(SCAN_PROJECTS)} {RESOLVED_CLAUSE} "
+        f"Priority: {priority_clause}"
     )
     result = []
     skip = 0
@@ -447,10 +479,11 @@ def fetch_resolved_state_map() -> dict[str, set[str]]:
     return result
 
 
-def fetch_all_activities(issue_ids: list[str]) -> dict[str, dict]:
+def fetch_all_activities(issue_ids: list[str],
+                        vocabulary: TagVocabulary | None = None) -> dict[str, dict]:
     """Fetch activities for many issues concurrently. Returns {issue_id: activity_dict}."""
     with ThreadPoolExecutor(max_workers=16) as executor:
-        results = executor.map(lambda iid: (iid, fetch_activities(iid)), issue_ids)
+        results = executor.map(lambda iid: (iid, fetch_activities(iid, vocabulary)), issue_ids)
         return dict(results)
 
 
@@ -584,6 +617,10 @@ PERCENTILES = (("25th", 0.25), ("50th (Median)", 0.50), ("75th", 0.75),
 ALL_PROJECTS = "All"
 BLANK_PLANNED_LABEL = "(blank)"
 ONE = Decimal(1)
+ASSUMED_TAG_NOTE = (
+    "An assumed tag date (no tag-add event in history, marked * in the table) forces Days to Tag "
+    "to 0. The assumed rate differs by product, so compare Days to Tag on the history-only basis."
+)
 REVERSED_PERCENTILE_NOTE = (
     "Days Tag to Release uses a reversed percentile threshold: formulas use 1-p, so 90th "
     "means 90% of tickets were tagged at least this many days before release."
@@ -726,6 +763,7 @@ PLANNED_VOLUME_CSV_FILE = os.path.join("reports", "release_stoppers_planned_vers
 SUBSYSTEM_CSV_FILE = os.path.join("reports", "release_stoppers_subsystems.csv")
 REGRESSIONS_CSV_FILE = os.path.join("reports", "release_stoppers_regressions.csv")
 WATCHLIST_CSV_FILE = os.path.join("reports", "release_stoppers_watchlist.csv")
+COMPARISON_CSV_FILE = os.path.join("reports", "release_stoppers_comparison.csv")
 
 
 XLSX_FILE = os.path.join("reports", "release_stoppers.xlsx")
@@ -890,6 +928,57 @@ def write_markdown_rollups(f, rows: list[dict]):
                 f"{r['support_tickets']} | {r['affected_licenses']} | {r['votes']} | | |\n")
 
 
+def cell_text(value, number_format=None) -> str:
+    """Render a block cell as text for Markdown/CSV, honouring the column's number format."""
+    if value is None or value == "":
+        return ""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if number_format == FMT_PCT:
+            return f"{Decimal(repr(value * 100)).quantize(Decimal('0.1'), ROUND_HALF_UP)}%"
+        if number_format == FMT_NUM1:
+            return fmt_1dp(value)
+    return str(value)
+
+
+def write_md_blocks(f, blocks, heading_level: int = 3):
+    """Render (caption, header, rows, formats) blocks as Markdown tables."""
+    hashes = "#" * heading_level
+    for caption, header, data_rows, formats in blocks:
+        if caption:
+            f.write(f"\n{hashes} {caption}\n\n")
+        else:
+            f.write("\n")
+        f.write("| " + " | ".join(header) + " |\n")
+        f.write("|" + "".join("---:|" if fmt in (FMT_NUM1, FMT_INT, FMT_PCT) else "---|"
+                              for fmt in formats) + "\n")
+        for row in data_rows:
+            padded = list(row) + [None] * (len(header) - len(row))
+            f.write("| " + " | ".join(cell_text(v, fmt) for v, fmt in zip(padded, formats)) + " |\n")
+
+
+def write_csv_blocks(path: str, blocks):
+    """Write blocks to one CSV, stacked with a blank line between them."""
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        for index, (caption, header, data_rows, formats) in enumerate(blocks):
+            if index:
+                writer.writerow([])
+            if caption:
+                writer.writerow([caption])
+            writer.writerow(header)
+            for row in data_rows:
+                padded = list(row) + [None] * (len(header) - len(row))
+                writer.writerow([cell_text(v, fmt) for v, fmt in zip(padded, formats)])
+    print(f"CSV written to {path}")
+
+
+INVALID_SHEET_CHARS = str.maketrans({c: '-' for c in '[]:*?/' + chr(92)})
+
+
+def sheet_name(title: str) -> str:
+    """Excel rejects [ ] : * ? / and backslash in sheet names, and caps them at 31 chars."""
+    return title.translate(INVALID_SHEET_CHARS)[:31]
+
 def md_issue_link(issue_id: str) -> str:
     return f"[{issue_id}]({issue_url(issue_id)})"
 
@@ -903,6 +992,22 @@ def write_md_crosstab(f, label_header: str, volume, projects: list[str], total: 
         f.write(f"| {label} | {count} | {share} | {cells} |\n")
     f.write(f"| **Total** | **{total}** | **{fmt_share(total, total)}** | "
             + " | ".join("" for _ in projects) + " |\n")
+
+
+def write_comparison(rows: list[dict], cohorts: dict[str, list[dict]]):
+    """Append the cross-product comparison to the report and write it as its own CSV."""
+    blocks = comparison_blocks({DOTNET_COHORT_NAME: rows, **cohorts})
+    with open(MD_FILE, "a", encoding="utf-8") as f:
+        f.write("\n## Cross-product comparison\n\n")
+        f.write("Other JetBrains products measured over the same window "
+                f"(`{RESOLVED_DATE_RANGE}`) with the same metric definitions, each against its "
+                "own product's release calendar.\n")
+        for cohort in COMPARISON_COHORTS:
+            if cohort.name in cohorts and cohort.note:
+                f.write(f"\n- **{cohort.name}** - {cohort.note}\n")
+        write_md_blocks(f, blocks)
+    print(f"Comparison appended to {MD_FILE}")
+    write_csv_blocks(COMPARISON_CSV_FILE, blocks)
 
 
 def write_rollup_csvs(rows: list[dict]):
@@ -981,7 +1086,129 @@ def write_csv(rows: list[dict]):
     print(f"CSV written to {CSV_FILE}")
 
 
-def xlsx_sheets(rows: list[dict]) -> list[tuple[str, list[tuple]]]:
+# --------------------------------------------------------------------------------------
+# Comparison cohorts (other JetBrains products, same window and metric definitions)
+# --------------------------------------------------------------------------------------
+
+class ComparisonCohort(NamedTuple):
+    """Another product's release blockers, measured the same way for a like-for-like read."""
+    name: str
+    query: str                    # YouTrack query; RESOLVED_CLAUSE is appended
+    vocabulary: TagVocabulary
+    product_code: str             # which release calendar dates Days Tag to Release
+    note: str = ""
+
+
+DOTNET_COHORT_NAME = "dotnet"
+COMPARISON_COHORTS = (
+    ComparisonCohort(
+        name="IJPL+JBR",
+        query="project: IJPL, JBR tag: blocking-release, blocking-release-idea",
+        vocabulary=TagVocabulary.of(measure=("blocking-release", "blocking-release-idea")),
+        product_code="IIU",
+        note="IntelliJ platform + JetBrains Runtime; ships on the IDEA calendar, not ReSharper's.",
+    ),
+)
+
+# Percentiles are reported on two bases. An assumed tag date (no tag-add event in history) forces
+# Days to Tag to 0, and the assumed rate differs sharply between products, so the history-only
+# basis is the fair one for that metric.
+COMPARISON_BASES = (("all rows", False), ("tag date in history only", True))
+
+
+def cohort_issue_query(cohort: ComparisonCohort) -> str:
+    return f"{cohort.query} {RESOLVED_CLAUSE}"
+
+
+def fetch_cohort_issues(cohort: ComparisonCohort) -> list[dict]:
+    """All issues matching a cohort's query, paginated (these sets can exceed one page)."""
+    result, skip = [], 0
+    while True:
+        response = client.get(
+            f"{YOUTRACK_URL}/issues",
+            params={"fields": ISSUE_FIELDS, "query": cohort_issue_query(cohort),
+                    "$top": 1000, "$skip": skip},
+        )
+        response.raise_for_status()
+        chunk = response.json()
+        for issue in chunk:
+            issue["_cf"] = {f.get("name"): f.get("value") for f in issue.get("customFields", [])}
+            result.append(issue)
+        if len(chunk) < 1000:
+            return result
+        skip += 1000
+
+
+def build_cohort_rows(cohort: ComparisonCohort, resolved_state_map: dict[str, set[str]],
+                      default_resolved_states: set[str]) -> list[dict]:
+    """Fetch and measure one comparison cohort. Every issue matched the tag query, so all qualify."""
+    issues = fetch_cohort_issues(cohort)
+    print(f"  {cohort.name}: {len(issues)} issues matched")
+    calendar = get_release_calendar(cohort.product_code)
+    activities = fetch_all_activities([i["idReadable"] for i in issues], cohort.vocabulary)
+    rows = []
+    for issue in issues:
+        row = compute_row(issue, activities[issue["idReadable"]], calendar,
+                          resolved_state_map, default_resolved_states, True)
+        if row is not None:
+            rows.append(row)
+    assumed = sum(1 for r in rows if r["tag_added"].endswith("*"))
+    print(f"  {cohort.name}: {len(rows)} rows ({len(rows) - assumed} with tag history, "
+          f"{assumed} assumed at creation)")
+    return rows
+
+
+def history_only(rows: list[dict]) -> list[dict]:
+    """Rows whose tag date came from activity history, i.e. Days to Tag is really measured."""
+    return [r for r in rows if not r["tag_added"].endswith("*")]
+
+
+def cohort_summary_block(cohorts: dict[str, list[dict]]) -> tuple:
+    header = ["Cohort", "Issues", "With tag history", "Assumed at creation", "Assumed %",
+              "Release calendar", "Query"]
+    by_name = {c.name: c for c in COMPARISON_COHORTS}
+    data = []
+    for name, rows in cohorts.items():
+        cohort = by_name.get(name)
+        kept = len(history_only(rows))
+        assumed = len(rows) - kept
+        data.append([name, len(rows), kept, assumed, share_value(assumed, len(rows)),
+                     cohort.product_code if cohort else PRODUCT_CODE,
+                     cohort_issue_query(cohort) if cohort else
+                     f"tag: {', '.join(SEARCH_TAGS)} {RESOLVED_CLAUSE} (+ history scan of "
+                     f"{', '.join(SCAN_PROJECTS)})"])
+    return ("Cohorts", header, data,
+            [FMT_TEXT, FMT_INT, FMT_INT, FMT_INT, FMT_PCT, FMT_TEXT, FMT_TEXT])
+
+
+def comparison_blocks(cohorts: dict[str, list[dict]]) -> list[tuple]:
+    """Percentile comparison as (caption, header, rows, formats) blocks.
+
+    One block per metric; a column per cohort per basis, so the assumed-tag artifact is visible
+    side by side instead of hidden in a single number.
+    """
+    columns = [(name, basis_label, drop_assumed)
+               for name in cohorts
+               for basis_label, drop_assumed in COMPARISON_BASES]
+    tables = {(name, label): build_percentile_table(history_only(rows) if drop else rows)
+              for name, rows in cohorts.items()
+              for label, drop in COMPARISON_BASES}
+
+    blocks = [cohort_summary_block(cohorts)]
+    header = ["Percentile"] + [f"{name} ({label})" for name, label, _ in columns]
+    formats = [FMT_TEXT] + [FMT_NUM1] * len(columns)
+    for metric, _, is_reversed in ROLLUP_METRICS:
+        caption = metric + ("   (reversed: percentiles use 1-p)" if is_reversed else "")
+        data = [["Valid N"] + [tables[(n, l)][metric]["n"][ALL_PROJECTS] for n, l, _ in columns]]
+        data += [[label] + [num_or_none(tables[(n, l)][metric]["p"][label][ALL_PROJECTS])
+                            for n, l, _ in columns]
+                 for label, _ in PERCENTILES]
+        blocks.append((caption, header, data, formats))
+    blocks.append((None, ["Note"], [[REVERSED_PERCENTILE_NOTE], [ASSUMED_TAG_NOTE]], [FMT_TEXT]))
+    return blocks
+
+def xlsx_sheets(rows: list[dict],
+                cohorts: dict[str, list[dict]] | None = None) -> list[tuple[str, list[tuple]]]:
     """Workbook layout: [(sheet title, [(caption, header, data rows, column formats), ...])].
 
     Pure — no openpyxl needed, so the layout is testable on its own. Tabs mirror the tracking
@@ -1061,10 +1288,24 @@ def xlsx_sheets(rows: list[dict]) -> list[tuple[str, list[tuple]]]:
              for r in watchlist],
             [FMT_TEXT] * 9 + [FMT_INT] * 3 + [FMT_TEXT] * 2,
         )]),
-    ]
+    ] + comparison_sheets(rows, cohorts)
 
 
-def write_xlsx(rows: list[dict]):
+def comparison_sheets(rows: list[dict],
+                      cohorts: dict[str, list[dict]] | None) -> list[tuple[str, list[tuple]]]:
+    """The Comparison tab plus one raw-data tab per comparison cohort (empty if none were run)."""
+    if not cohorts:
+        return []
+    combined = {DOTNET_COHORT_NAME: rows, **cohorts}
+    sheets = [("Comparison", comparison_blocks(combined))]
+    for name, cohort_rows in cohorts.items():
+        sheets.append((sheet_name(name), [(None, ISSUE_TABLE_HEADER,
+                                           [issue_table_row(r) for r in cohort_rows],
+                                           ISSUE_TABLE_FORMATS)]))
+    return sheets
+
+
+def write_xlsx(rows: list[dict], cohorts: dict[str, list[dict]] | None = None):
     """One workbook, one tab per rollup. Skipped with a note if openpyxl isn't installed."""
     try:
         from openpyxl import Workbook
@@ -1080,7 +1321,7 @@ def write_xlsx(rows: list[dict]):
 
     wb = Workbook()
     wb.remove(wb.active)
-    for title, blocks in xlsx_sheets(rows):
+    for title, blocks in xlsx_sheets(rows, cohorts):
         ws = wb.create_sheet(title[:31])  # Excel caps sheet names at 31 chars
         widths: dict[int, int] = {}
         freeze_at = None
@@ -1119,7 +1360,7 @@ def write_xlsx(rows: list[dict]):
     print(f"Workbook written to {XLSX_FILE} ({len(wb.sheetnames)} tabs)")
 
 
-def main():
+def main(compare: bool = False):
     # Path A: issues that currently carry a stopper tag (always qualify).
     print(f"Fetching resolved issues tagged {SEARCH_TAGS}...")
     issues = fetch_issues()
@@ -1239,10 +1480,42 @@ def main():
 
     print_rollups(rows)
 
+    cohorts = {}
+    if compare and COMPARISON_COHORTS:
+        print(f"\nFetching {len(COMPARISON_COHORTS)} comparison cohort(s)...")
+        for cohort in COMPARISON_COHORTS:
+            cohort_rows = build_cohort_rows(cohort, resolved_state_map, default_resolved_states)
+            if cohort_rows:
+                cohorts[cohort.name] = cohort_rows
+        if cohorts:
+            print_comparison(rows, cohorts)
+
     write_markdown(rows, no_history_count)
     write_csv(rows)
     write_rollup_csvs(rows)
-    write_xlsx(rows)
+    if cohorts:
+        write_comparison(rows, cohorts)
+    write_xlsx(rows, cohorts)
+
+
+def print_comparison(rows: list[dict], cohorts: dict[str, list[dict]]):
+    for caption, header, data_rows, formats in comparison_blocks(
+            {DOTNET_COHORT_NAME: rows, **cohorts}):
+        if caption == "Cohorts":
+            print("\nCohorts")
+            for row in data_rows:
+                print(f"    {row[0]:<12}n={row[1]:<6}history={row[2]:<6}assumed={row[3]} "
+                      f"({cell_text(row[4], FMT_PCT)})")
+            continue
+        if caption is None:
+            continue
+        print(f"\n{caption}")
+        widths = [max(12, len(h) + 2) for h in header[1:]]
+        print(f"    {'':<16}" + "".join(f"{h:>{w}}" for h, w in zip(header[1:], widths)))
+        for row in data_rows:
+            cells = "".join(f"{cell_text(v, f):>{w}}"
+                            for v, f, w in zip(row[1:], formats[1:], widths))
+            print(f"    {row[0]:<16}{cells}")
 
 
 def print_rollups(rows: list[dict]):
@@ -1289,4 +1562,9 @@ def print_rollups(rows: list[dict]):
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser.add_argument("--compare", action="store_true",
+                        help="also measure the comparison cohorts (%s) and add the "
+                             "cross-product comparison to the report; roughly doubles runtime"
+                             % ", ".join(c.name for c in COMPARISON_COHORTS))
+    main(**vars(parser.parse_args()))
